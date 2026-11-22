@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { EvidenceQuote } from "@/components/marco/evidence-quote";
 import { FindingBadge } from "@/components/marco/finding-badge";
 import { MetricTile } from "@/components/marco/metric-tile";
@@ -36,7 +37,8 @@ function Section({ title, description, children }: { title: string; description?
   );
 }
 
-export default function StyleguidePage() {
+export default async function StyleguidePage() {
+  await connection(); // show the mode at request time
   const current = getMode();
 
   return (

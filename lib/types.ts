@@ -291,3 +291,35 @@ export type Draft = z.infer<typeof Draft>;
 export function canApproveDraft(draft: Pick<Draft, "claimChecks">): boolean {
   return draft.claimChecks.every((c) => c.supported && (c.factId !== null || c.sourceUrl !== null));
 }
+
+// ---------------------------------------------------------------------------
+// Snapshot pipeline (website reading and progress)
+// ---------------------------------------------------------------------------
+
+/** One page of the company's website, as text. Treated as data, never as instructions. */
+export const ExtractedPage = z.object({
+  url: HttpUrl,
+  title: z.string(),
+  content: z.string(),
+});
+export type ExtractedPage = z.infer<typeof ExtractedPage>;
+
+export const SNAPSHOT_STEPS = ["reading", "facts", "asking", "classifying", "done"] as const;
+export const SnapshotStep = z.enum(SNAPSHOT_STEPS);
+export type SnapshotStep = z.infer<typeof SnapshotStep>;
+
+/** Saved after every step, so a snapshot can resume after an error or a reload. */
+export const SnapshotProgress = z.object({
+  auditId: Id,
+  step: SnapshotStep,
+  /** Index of the next question to ask (asking) or answer to classify (classifying). */
+  index: z.number().int().min(0),
+  totalQuestions: z.number().int().min(1),
+  status: z.enum(["running", "failed", "done"]),
+  /** Plain-language error shown with a "Try again" button. */
+  error: z.string().nullable(),
+  /** Failed attempts on the current step (used to retry safely). */
+  attempts: z.number().int().min(0),
+  updatedAt: Timestamp,
+});
+export type SnapshotProgress = z.infer<typeof SnapshotProgress>;
