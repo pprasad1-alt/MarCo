@@ -28,14 +28,16 @@ const Fixture = z.object({
   contentChecks: z.record(z.string(), z.object({ result: ContentCheckResult, note: z.string() })),
   /** One answer, or several that runs 1, 2, 3 use in turn (AI answers vary between runs). */
   answers: z.record(z.string(), z.union([MockAnswer, z.array(MockAnswer).min(1)])),
+  /** Answers used by re-audits; questions not listed reuse `answers`. */
+  reauditAnswers: z.record(z.string(), z.union([MockAnswer, z.array(MockAnswer).min(1)])).default({}),
 });
 export type Fixture = z.infer<typeof Fixture>;
 
 export const MOCK_FIXTURE: Fixture = Fixture.parse(raw);
 
-/** The mock answer for a question on a given run (1-based). */
-export function mockAnswerFor(promptId: string, runNumber = 1): MockAnswer | undefined {
-  const entry = MOCK_FIXTURE.answers[promptId];
+/** The mock answer for a question on a given run (1-based). Re-audits may use different answers. */
+export function mockAnswerFor(promptId: string, runNumber = 1, reaudit = false): MockAnswer | undefined {
+  const entry = (reaudit && MOCK_FIXTURE.reauditAnswers[promptId]) || MOCK_FIXTURE.answers[promptId];
   if (!entry) return undefined;
   const list = Array.isArray(entry) ? entry : [entry];
   return list[(runNumber - 1) % list.length];

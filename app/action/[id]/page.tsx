@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, FlaskConical } from "lucide-react";
+import { ArrowLeft, FlaskConical, TriangleAlert } from "lucide-react";
 import { DraftEditor } from "@/components/marco/draft-editor";
 import { EvidenceQuote } from "@/components/marco/evidence-quote";
 import { FindingBadge } from "@/components/marco/finding-badge";
 import { OutcomeBadge } from "@/components/marco/outcome-badge";
 import { CONTENT_CHECK_LABELS, OUTCOME_LABELS, STRENGTH_LABELS } from "@/lib/findings";
+import { staleIssueIds } from "@/lib/results";
 import { getActionBundle } from "@/lib/store";
 import { FOCUS_AREA_LABELS } from "@/lib/types";
 
@@ -57,6 +58,7 @@ export default async function ActionPage(props: PageProps<"/action/[id]">) {
   const fact = factId ? bundle.facts.find((f) => f.id === factId) : undefined;
   const factHref = fact ? safeHref(fact.sourceUrl) : null;
   const isMock = bundle.runs.some((r) => r.mode === "MOCK");
+  const stale = staleIssueIds(bundle).has(issue.id);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -77,6 +79,13 @@ export default async function ActionPage(props: PageProps<"/action/[id]">) {
           <p className="flex items-start gap-2 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
             <FlaskConical className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             Sample data for {brand.name}, a fictional company.
+          </p>
+        )}
+        {stale && (
+          <p role="note" className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            The fact behind this finding changed after this audit. Any approved draft that relied on it is back in review.
+            Run a re-audit to check the finding again.
           </p>
         )}
       </header>

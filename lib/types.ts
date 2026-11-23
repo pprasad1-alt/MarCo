@@ -160,6 +160,8 @@ export const Audit = z.object({
   /** For re-audits: the audit being compared against. */
   baselineAuditId: Id.nullable(),
   createdAt: Timestamp,
+  /** The mode this audit runs in, fixed at the start so it never switches halfway. */
+  mode: Mode.optional(),
 });
 export type Audit = z.infer<typeof Audit>;
 

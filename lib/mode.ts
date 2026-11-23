@@ -77,6 +77,11 @@ export function resolveMode(env: Env): ModeInfo {
   return info("GEMINI_AUDIT", "GEMINI_API_KEY is set, so MarCo uses Gemini with Google Search grounding.");
 }
 
+/** Mode info for a stored mode (e.g. the mode an audit started in). */
+export function modeInfoFor(mode: Mode, reason = "Fixed when this audit started."): ModeInfo {
+  return info(mode, reason);
+}
+
 /** Reads the real environment. Server-side only. */
 export function getMode(): ModeInfo {
   return resolveMode(process.env);

@@ -1,5 +1,5 @@
 {
-  "_note": "MOCK DATA. FlowOps is a fictional company. Every answer below is invented sample text for demos and tests, never shown as a real audit (the mock banner is always visible). Deep-audit sample data covers two focus areas: Pricing and plans, and Use cases and customers. Where a question lists several answers, runs 1-3 use them in turn.",
+  "_note": "MOCK DATA. FlowOps is a fictional company. Every answer below is invented sample text for demos and tests, never shown as a real audit (the mock banner is always visible). Deep-audit sample data covers two focus areas: Pricing and plans, and Use cases and customers. Where a question lists several answers, runs 1-3 use them in turn. reauditAnswers: answers used by re-audits in mock mode (questions not listed reuse the normal answers, so they show no change).",
   "brand": {
     "name": "FlowOps",
     "url": "https://flowops.example.com/",
@@ -689,5 +689,150 @@
       "result": "stated_unclearly",
       "note": "Mentioned only once, in passing, on your About page. Your homepage says “growing startups” but never says what team size FlowOps is built for."
     }
+  },
+  "reauditAnswers": {
+    "uc-fact-who-uses": [
+      {
+        "answer": "FlowOps is used mainly by small startup teams that want simple sprint planning. More than 1,200 startups use it.",
+        "citations": [
+          {
+            "url": "https://flowops.example.com/",
+            "title": "FlowOps"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is used mainly by small startup teams",
+              "factId": "f-usecase-size",
+              "relation": "supports"
+            },
+            {
+              "excerpt": "More than 1,200 startups use it.",
+              "factId": "f-customers",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": [
+            "f-usecase-size",
+            "f-customers"
+          ]
+        }
+      },
+      {
+        "answer": "FlowOps is popular with enterprise IT and PMO teams that run large project portfolios.",
+        "citations": [
+          {
+            "url": "https://directory.example.com/flowops",
+            "title": "FlowOps company profile"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is popular with enterprise IT and PMO teams that run large project portfolios.",
+              "factId": "f-usecase-size",
+              "relation": "contradicts"
+            }
+          ],
+          "relevantFactIds": [
+            "f-usecase-size",
+            "f-customers"
+          ]
+        }
+      },
+      {
+        "answer": "FlowOps is used mainly by small startup teams that want simple sprint planning. More than 1,200 startups use it.",
+        "citations": [
+          {
+            "url": "https://flowops.example.com/",
+            "title": "FlowOps"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is used mainly by small startup teams",
+              "factId": "f-usecase-size",
+              "relation": "supports"
+            },
+            {
+              "excerpt": "More than 1,200 startups use it.",
+              "factId": "f-customers",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": [
+            "f-usecase-size",
+            "f-customers"
+          ]
+        }
+      }
+    ],
+    "uc-fact-fit": [
+      {
+        "answer": "Yes. FlowOps is aimed at startups of roughly that size, and its plans are priced for small teams.",
+        "citations": [
+          {
+            "url": "https://flowops.example.com/about",
+            "title": "About FlowOps"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is aimed at startups of roughly that size",
+              "factId": "f-usecase-size",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": [
+            "f-usecase-size"
+          ]
+        }
+      },
+      {
+        "answer": "Yes. FlowOps is aimed at startups of roughly that size, and its plans are priced for small teams.",
+        "citations": [
+          {
+            "url": "https://flowops.example.com/about",
+            "title": "About FlowOps"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is aimed at startups of roughly that size",
+              "factId": "f-usecase-size",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": [
+            "f-usecase-size"
+          ]
+        }
+      },
+      {
+        "answer": "FlowOps is designed for large organizations, so a 20-person startup may find it more than it needs.",
+        "citations": [
+          {
+            "url": "https://directory.example.com/flowops",
+            "title": "FlowOps company profile"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is designed for large organizations",
+              "factId": "f-usecase-size",
+              "relation": "contradicts"
+            }
+          ],
+          "relevantFactIds": [
+            "f-usecase-size"
+          ]
+        }
+      }
+    ]
   }
 }

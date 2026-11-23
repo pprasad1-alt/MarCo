@@ -7,6 +7,8 @@ export const metadata: Metadata = { title: "Confirm your facts · MarCo" };
 
 export default async function FactsPage(props: PageProps<"/snapshot/[id]/facts">) {
   const { id } = await props.params;
+  const { return: ret } = await props.searchParams;
+  const returnTo = typeof ret === "string" && /^[0-9a-f-]{36}$/i.test(ret) ? `/audit/${ret}/report` : null;
   const bundle = await getSnapshotBundle(id);
   if (!bundle?.brand || bundle.audit.type !== "snapshot") notFound();
   if (bundle.progress?.status !== "done") redirect(`/snapshot/${id}`);
@@ -22,7 +24,7 @@ export default async function FactsPage(props: PageProps<"/snapshot/[id]/facts">
           confirmed.
         </p>
       </header>
-      <FactReview brandId={bundle.brand.id} snapshotId={id} facts={bundle.facts} />
+      <FactReview brandId={bundle.brand.id} snapshotId={id} facts={bundle.facts} returnTo={returnTo} />
     </div>
   );
 }

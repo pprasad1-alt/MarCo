@@ -37,6 +37,15 @@ export default function Home() {
 
         <UrlForm />
 
+        <p className="text-sm text-slate-600">
+          Not ready to try your own site?{" "}
+          {/* Plain link (no prefetch): opening it may start a sample run. */}
+          <a href="/sample" className="font-medium text-indigo-600 hover:underline">
+            See a sample report
+          </a>{" "}
+          for FlowOps, a fictional company.
+        </p>
+
         <Suspense>
           <MockOnly>
             <p className="flex items-start gap-1.5 text-sm text-slate-500">

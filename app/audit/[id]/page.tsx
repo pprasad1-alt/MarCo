@@ -17,7 +17,9 @@ export default async function AuditProgressPage(props: PageProps<"/audit/[id]">)
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Running your deep audit</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          {bundle.audit.type === "re_audit" ? "Running your re-audit" : "Running your deep audit"}
+        </h1>
         <p className="text-sm text-slate-500">
           {bundle.brand.name} · {bundle.audit.focusArea ? FOCUS_AREA_LABELS[bundle.audit.focusArea] : ""}
         </p>

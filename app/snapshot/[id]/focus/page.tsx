@@ -19,7 +19,7 @@ export default async function FocusPage(props: PageProps<"/snapshot/[id]/focus">
   if (bundle.progress?.status !== "done") redirect(`/snapshot/${id}`);
   if (!bundle.brand.factsReviewedAt) redirect(`/snapshot/${id}/facts`);
 
-  const isMock = getMode().mode === "MOCK";
+  const isMock = (bundle.audit.mode ?? getMode().mode) === "MOCK";
   const findings = buildSnapshotResults(bundle).answers.flatMap((a) => a.findings.filter((f) => f.kind !== "accurate"));
   const options = FOCUS_AREAS.map((area) => {
     const available = !isMock || MOCK_DEEP_AREAS.includes(area);
