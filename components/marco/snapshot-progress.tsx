@@ -6,21 +6,26 @@ import { useRouter } from "next/navigation";
 import { Circle, CircleCheck, Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { STEP_LABELS, VISIBLE_STEPS } from "@/lib/steps";
+import { STEP_LABELS, STEPS_FOR } from "@/lib/steps";
 import type { SnapshotStatus } from "@/lib/audit";
+import type { AuditType } from "@/lib/types";
 
-type Props = { initial: SnapshotStatus };
+type Props = { initial: SnapshotStatus; auditType?: AuditType };
 
-/** Overall progress, counting each question and each classification as one unit. */
-function percent(s: SnapshotStatus): number {
+/** Overall progress: each answer asked or classified counts as one unit; other steps count as one. */
+function percent(s: SnapshotStatus, steps: string[]): number {
   const n = s.totalQuestions;
-  const total = 2 + n * 2;
-  const done =
-    s.step === "reading" ? 0 : s.step === "facts" ? 1 : s.step === "asking" ? 2 + s.index : s.step === "classifying" ? 2 + n + s.index : total;
-  return Math.round((done / total) * 100);
+  const size = (step: string) => (step === "asking" || step === "classifying" ? n : 1);
+  const total = steps.reduce((sum, st) => sum + size(st), 0);
+  if (s.step === "done") return 100;
+  const before = steps.slice(0, Math.max(0, steps.indexOf(s.step))).reduce((sum, st) => sum + size(st), 0);
+  const within = s.step === "asking" || s.step === "classifying" ? s.index : 0;
+  return Math.round(((before + within) / total) * 100);
 }
 
-export function SnapshotProgress({ initial }: Props) {
+export function SnapshotProgress({ initial, auditType = "snapshot" }: Props) {
+  const steps = STEPS_FOR[auditType];
+  const resultsUrl = auditType === "snapshot" ? `/snapshot/${initial.auditId}/results` : `/audit/${initial.auditId}/report`;
   const router = useRouter();
   const [status, setStatus] = useState<SnapshotStatus>(initial);
   const [fatal, setFatal] = useState<string | null>(null);
@@ -32,7 +37,7 @@ export function SnapshotProgress({ initial }: Props) {
     running.current = true;
     try {
       while (mounted.current) {
-        const res = await fetch(`/api/snapshot/${initial.auditId}/step`, { method: "POST" });
+        const res = await fetch(`/api/audits/${initial.auditId}/step`, { method: "POST" });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
           if (res.status === 404) {
@@ -46,7 +51,7 @@ export function SnapshotProgress({ initial }: Props) {
         if (!mounted.current) break;
         setStatus(next);
         if (next.status === "done") {
-          router.replace(`/snapshot/${initial.auditId}/results`);
+          router.replace(resultsUrl);
           break;
         }
         if (next.status === "failed") break;
@@ -60,20 +65,20 @@ export function SnapshotProgress({ initial }: Props) {
     } finally {
       running.current = false;
     }
-  }, [initial.auditId, router]);
+  }, [initial.auditId, router, resultsUrl]);
 
   useEffect(() => {
     mounted.current = true;
     // Start on the next tick; the cleanup cancels it if React re-mounts (dev mode).
     const timer = setTimeout(() => {
       if (initial.status === "running") void run();
-      if (initial.status === "done") router.replace(`/snapshot/${initial.auditId}/results`);
+      if (initial.status === "done") router.replace(resultsUrl);
     }, 0);
     return () => {
       clearTimeout(timer);
       mounted.current = false;
     };
-  }, [initial.status, initial.auditId, run, router]);
+  }, [initial.status, run, router, resultsUrl]);
 
   function tryAgain() {
     setStatus((s) => ({ ...s, status: "running", error: null }));
@@ -94,28 +99,33 @@ export function SnapshotProgress({ initial }: Props) {
     );
   }
 
-  const currentIdx = status.step === "done" ? VISIBLE_STEPS.length : VISIBLE_STEPS.indexOf(status.step);
+  const currentIdx = status.step === "done" ? steps.length : steps.indexOf(status.step as (typeof steps)[number]);
+  const i = Math.min(status.index, status.totalQuestions - 1);
+  const runsPerQuestion = auditType === "snapshot" ? 1 : 3;
   const counter =
     status.step === "asking"
-      ? `Question ${Math.min(status.index + 1, status.totalQuestions)} of ${status.totalQuestions}`
+      ? runsPerQuestion === 1
+        ? `Question ${i + 1} of ${status.totalQuestions}`
+        : `Question ${Math.floor(i / runsPerQuestion) + 1} of ${status.totalQuestions / runsPerQuestion} · run ${(i % runsPerQuestion) + 1} of ${runsPerQuestion}`
       : status.step === "classifying"
-        ? `Answer ${Math.min(status.index + 1, status.totalQuestions)} of ${status.totalQuestions}`
+        ? `Answer ${i + 1} of ${status.totalQuestions}`
         : null;
+  const pct = percent(status, steps);
   const failed = status.status === "failed";
 
   return (
     <div className="space-y-6 rounded-xl border p-6">
       <div className="space-y-3">
         <div className="flex items-baseline justify-between gap-4">
-          <p className="text-sm font-medium text-slate-700">{percent(status)}% complete</p>
+          <p className="text-sm font-medium text-slate-700">{pct}% complete</p>
           {counter && <p className="font-mono text-sm text-slate-500">{counter}</p>}
         </div>
-        <Progress value={percent(status)} aria-label="Snapshot progress" />
+        <Progress value={pct} aria-label="Snapshot progress" />
       </div>
 
       <ol className="space-y-3" aria-live="polite">
-        {VISIBLE_STEPS.map((step, i) => {
-          const state = i < currentIdx ? "done" : i === currentIdx ? (failed ? "failed" : "current") : "pending";
+        {steps.map((step, n) => {
+          const state = n < currentIdx ? "done" : n === currentIdx ? (failed ? "failed" : "current") : "pending";
           return (
             <li key={step} className="flex items-center gap-3" aria-current={state === "current" ? "step" : undefined}>
               {state === "done" && <CircleCheck className="size-5 shrink-0 text-green-700" aria-hidden="true" />}

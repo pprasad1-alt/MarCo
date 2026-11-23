@@ -1,11 +1,22 @@
-import type { SnapshotStep } from "@/lib/types";
+import type { AuditType, SnapshotStep } from "@/lib/types";
 
-/** Plain-language step names for the progress screen, in order. */
-export const STEP_LABELS: Record<Exclude<SnapshotStep, "done">, string> = {
+type VisibleStep = Exclude<SnapshotStep, "done">;
+
+/** Plain-language step names for the progress screen. */
+export const STEP_LABELS: Record<VisibleStep, string> = {
   reading: "Reading your website",
   facts: "Extracting facts",
   asking: "Asking AI buyer questions",
   classifying: "Classifying answers",
+  diagnosing: "Working out what to fix",
 };
 
-export const VISIBLE_STEPS = Object.keys(STEP_LABELS) as Exclude<SnapshotStep, "done">[];
+/** The steps each audit type goes through, in order. */
+export const STEPS_FOR: Record<AuditType, VisibleStep[]> = {
+  snapshot: ["reading", "facts", "asking", "classifying"],
+  deep: ["asking", "classifying", "diagnosing"],
+  re_audit: ["asking", "classifying", "diagnosing"],
+};
+
+/** Kept for the snapshot screen. */
+export const VISIBLE_STEPS = STEPS_FOR.snapshot;

@@ -1,16 +1,20 @@
 {
-  "_note": "MOCK DATA. FlowOps is a fictional company. Every answer below is invented sample text for demos and tests, never shown as a real audit (the mock banner is always visible).",
+  "_note": "MOCK DATA. FlowOps is a fictional company. Every answer below is invented sample text for demos and tests, never shown as a real audit (the mock banner is always visible). Deep-audit sample data covers two focus areas: Pricing and plans, and Use cases and customers. Where a question lists several answers, runs 1-3 use them in turn.",
   "brand": {
     "name": "FlowOps",
     "url": "https://flowops.example.com/",
     "category": "project management software",
-    "competitors": ["Asana", "ClickUp", "Monday.com"]
+    "competitors": [
+      "Asana",
+      "ClickUp",
+      "Monday.com"
+    ]
   },
   "pages": [
     {
       "url": "https://flowops.example.com/",
       "title": "FlowOps: project management for startups",
-      "content": "FlowOps is project management software built for startups with 5 to 50 people. Plan sprints, track work and share a roadmap in one place. Trusted by more than 1,200 startups."
+      "content": "FlowOps is project management software for growing startups. Plan sprints, track work and share a roadmap in one place. Trusted by more than 1,200 startups."
     },
     {
       "url": "https://flowops.example.com/features",
@@ -30,112 +34,660 @@
     {
       "url": "https://flowops.example.com/about",
       "title": "About us",
-      "content": "FlowOps was founded in 2019 in Austin, Texas, by two former startup operations leads."
+      "content": "FlowOps was founded in 2019 in Austin, Texas, by two former startup operations leads. Most of our customers are teams of 5 to 50 people."
     }
   ],
   "facts": [
-    { "id": "f-features-core", "factType": "product_feature", "value": "Sprint boards, timelines and a shared roadmap view", "sourceUrl": "https://flowops.example.com/features" },
-    { "id": "f-features-time", "factType": "product_feature", "value": "Built-in time tracking on every task", "sourceUrl": "https://flowops.example.com/features" },
-    { "id": "f-pricing-free", "factType": "pricing", "value": "Free plan for up to 5 users", "sourceUrl": "https://flowops.example.com/pricing" },
-    { "id": "f-pricing-team", "factType": "pricing", "value": "Team plan costs $8 per user per month, billed annually", "sourceUrl": "https://flowops.example.com/pricing" },
-    { "id": "f-integrations", "factType": "integration", "value": "Integrates with Slack, GitHub, Google Drive and Figma", "sourceUrl": "https://flowops.example.com/integrations" },
-    { "id": "f-usecase-size", "factType": "use_case", "value": "Built for startups with 5 to 50 people", "sourceUrl": "https://flowops.example.com/" },
-    { "id": "f-customers", "factType": "customer", "value": "Used by more than 1,200 startups", "sourceUrl": "https://flowops.example.com/" },
-    { "id": "f-company-founded", "factType": "company", "value": "Founded in 2019 in Austin, Texas", "sourceUrl": "https://flowops.example.com/about" }
+    {
+      "id": "f-features-core",
+      "factType": "product_feature",
+      "value": "Sprint boards, timelines and a shared roadmap view",
+      "sourceUrl": "https://flowops.example.com/features"
+    },
+    {
+      "id": "f-features-time",
+      "factType": "product_feature",
+      "value": "Built-in time tracking on every task",
+      "sourceUrl": "https://flowops.example.com/features"
+    },
+    {
+      "id": "f-pricing-free",
+      "factType": "pricing",
+      "value": "Free plan for up to 5 users",
+      "sourceUrl": "https://flowops.example.com/pricing"
+    },
+    {
+      "id": "f-pricing-team",
+      "factType": "pricing",
+      "value": "Team plan costs $8 per user per month, billed annually",
+      "sourceUrl": "https://flowops.example.com/pricing"
+    },
+    {
+      "id": "f-integrations",
+      "factType": "integration",
+      "value": "Integrates with Slack, GitHub, Google Drive and Figma",
+      "sourceUrl": "https://flowops.example.com/integrations"
+    },
+    {
+      "id": "f-usecase-size",
+      "factType": "use_case",
+      "value": "Built for startup teams of 5 to 50 people",
+      "sourceUrl": "https://flowops.example.com/about"
+    },
+    {
+      "id": "f-customers",
+      "factType": "customer",
+      "value": "Used by more than 1,200 startups",
+      "sourceUrl": "https://flowops.example.com/"
+    },
+    {
+      "id": "f-company-founded",
+      "factType": "company",
+      "value": "Founded in 2019 in Austin, Texas",
+      "sourceUrl": "https://flowops.example.com/about"
+    }
   ],
   "answers": {
     "pf-discovery-best-tools": {
       "answer": "For a small startup team, popular choices are Asana, ClickUp, Monday.com, Trello and Linear. Trello is the simplest to start with, ClickUp packs in the most features, and Linear is a favorite of engineering-led teams.",
       "citations": [
-        { "url": "https://reviews.example.org/best-pm-tools-startups", "title": "Best project management tools for startups" },
-        { "url": "https://blog.example.net/pm-software-roundup", "title": "Project management software roundup" }
+        {
+          "url": "https://reviews.example.org/best-pm-tools-startups",
+          "title": "Best project management tools for startups"
+        },
+        {
+          "url": "https://blog.example.net/pm-software-roundup",
+          "title": "Project management software roundup"
+        }
       ],
-      "analysis": { "claims": [], "relevantFactIds": [] }
-    },
-    "pf-fact-main-features": {
-      "answer": "FlowOps offers sprint boards, timelines and a shared roadmap view so teams can plan and track work together. It also includes AI-generated meeting summaries that turn calls into tasks.",
-      "citations": [{ "url": "https://flowops.example.com/features", "title": "FlowOps features" }],
       "analysis": {
-        "claims": [
-          { "excerpt": "FlowOps offers sprint boards, timelines and a shared roadmap view", "factId": "f-features-core", "relation": "supports" },
-          { "excerpt": "It also includes AI-generated meeting summaries that turn calls into tasks.", "factId": null, "relation": "none" }
-        ],
-        "relevantFactIds": ["f-features-core", "f-features-time"]
-      }
-    },
-    "pp-fact-cost": {
-      "answer": "FlowOps has a free plan for up to 10 users. Its Team plan costs $8 per user per month when billed annually, and larger companies can move to a Business plan.",
-      "citations": [{ "url": "https://reviews.example.org/flowops-pricing", "title": "FlowOps pricing review" }],
-      "analysis": {
-        "claims": [
-          { "excerpt": "FlowOps has a free plan for up to 10 users.", "factId": "f-pricing-free", "relation": "contradicts" },
-          { "excerpt": "Its Team plan costs $8 per user per month when billed annually", "factId": "f-pricing-team", "relation": "supports" }
-        ],
-        "relevantFactIds": ["f-pricing-free", "f-pricing-team"]
-      }
-    },
-    "pp-discovery-free-plans": {
-      "answer": "ClickUp, Asana and Trello all have free plans that work well for small teams. FlowOps also offers a free plan aimed at startups. Free tiers usually limit storage, integrations or the number of users.",
-      "citations": [],
-      "analysis": {
-        "claims": [
-          { "excerpt": "FlowOps also offers a free plan aimed at startups.", "factId": "f-pricing-free", "relation": "supports" }
-        ],
+        "claims": [],
         "relevantFactIds": []
       }
     },
-    "int-fact-integrations": {
-      "answer": "FlowOps integrates with Slack and GitHub, so updates show up where your team already works. It also connects to more than 5,000 apps through Zapier.",
-      "citations": [{ "url": "https://flowops.example.com/integrations", "title": "FlowOps integrations" }],
+    "pf-fact-main-features": {
+      "answer": "FlowOps offers sprint boards, timelines and a shared roadmap view so teams can plan and track work together. It also includes AI-generated meeting summaries that turn calls into tasks.",
+      "citations": [
+        {
+          "url": "https://flowops.example.com/features",
+          "title": "FlowOps features"
+        }
+      ],
       "analysis": {
         "claims": [
-          { "excerpt": "FlowOps integrates with Slack and GitHub", "factId": "f-integrations", "relation": "supports" },
-          { "excerpt": "It also connects to more than 5,000 apps through Zapier.", "factId": null, "relation": "none" }
+          {
+            "excerpt": "FlowOps offers sprint boards, timelines and a shared roadmap view",
+            "factId": "f-features-core",
+            "relation": "supports"
+          },
+          {
+            "excerpt": "It also includes AI-generated meeting summaries that turn calls into tasks.",
+            "factId": null,
+            "relation": "none"
+          }
         ],
-        "relevantFactIds": ["f-integrations"]
+        "relevantFactIds": [
+          "f-features-core",
+          "f-features-time"
+        ]
+      }
+    },
+    "pp-fact-cost": [
+      {
+        "answer": "FlowOps has a free plan for up to 10 users. Its Team plan costs $8 per user per month when billed annually, and larger companies can move to a Business plan.",
+        "citations": [
+          {
+            "url": "https://reviews.example.org/flowops-pricing",
+            "title": "FlowOps pricing review"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps has a free plan for up to 10 users.",
+              "factId": "f-pricing-free",
+              "relation": "contradicts"
+            },
+            {
+              "excerpt": "Its Team plan costs $8 per user per month when billed annually",
+              "factId": "f-pricing-team",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": [
+            "f-pricing-free",
+            "f-pricing-team"
+          ]
+        }
+      },
+      {
+        "answer": "FlowOps offers a free plan for up to 10 users and a Team plan at $8 per user per month, billed annually.",
+        "citations": [
+          {
+            "url": "https://reviews.example.org/flowops-pricing",
+            "title": "FlowOps pricing review"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps offers a free plan for up to 10 users",
+              "factId": "f-pricing-free",
+              "relation": "contradicts"
+            },
+            {
+              "excerpt": "a Team plan at $8 per user per month, billed annually",
+              "factId": "f-pricing-team",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": [
+            "f-pricing-free",
+            "f-pricing-team"
+          ]
+        }
+      },
+      {
+        "answer": "FlowOps is free for up to 5 users. Paid plans start at $8 per user per month on annual billing.",
+        "citations": [
+          {
+            "url": "https://flowops.example.com/pricing",
+            "title": "FlowOps pricing"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is free for up to 5 users.",
+              "factId": "f-pricing-free",
+              "relation": "supports"
+            },
+            {
+              "excerpt": "Paid plans start at $8 per user per month on annual billing.",
+              "factId": "f-pricing-team",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": [
+            "f-pricing-free",
+            "f-pricing-team"
+          ]
+        }
+      }
+    ],
+    "pp-discovery-free-plans": [
+      {
+        "answer": "ClickUp, Asana and Trello all have free plans that work well for small teams. FlowOps also offers a free plan aimed at startups. Free tiers usually limit storage, integrations or the number of users.",
+        "citations": [],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps also offers a free plan aimed at startups.",
+              "factId": "f-pricing-free",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": []
+        }
+      },
+      {
+        "answer": "Trello, ClickUp and Asana offer the most generous free plans for small teams. Notion also works well for very small teams.",
+        "citations": [
+          {
+            "url": "https://reviews.example.org/free-pm-tools",
+            "title": "Best free project management tools"
+          }
+        ],
+        "analysis": {
+          "claims": [],
+          "relevantFactIds": []
+        }
+      },
+      {
+        "answer": "For small teams, ClickUp's Free Forever plan and Asana's free Personal plan are popular, and Trello's free plan is the simplest to start with.",
+        "citations": [
+          {
+            "url": "https://reviews.example.org/free-pm-tools",
+            "title": "Best free project management tools"
+          }
+        ],
+        "analysis": {
+          "claims": [],
+          "relevantFactIds": []
+        }
+      }
+    ],
+    "int-fact-integrations": {
+      "answer": "FlowOps integrates with Slack and GitHub, so updates show up where your team already works. It also connects to more than 5,000 apps through Zapier.",
+      "citations": [
+        {
+          "url": "https://flowops.example.com/integrations",
+          "title": "FlowOps integrations"
+        }
+      ],
+      "analysis": {
+        "claims": [
+          {
+            "excerpt": "FlowOps integrates with Slack and GitHub",
+            "factId": "f-integrations",
+            "relation": "supports"
+          },
+          {
+            "excerpt": "It also connects to more than 5,000 apps through Zapier.",
+            "factId": null,
+            "relation": "none"
+          }
+        ],
+        "relevantFactIds": [
+          "f-integrations"
+        ]
       }
     },
     "int-discovery-engineering": {
       "answer": "Engineering teams often pick Jira for deep developer workflows, Linear for speed, or ClickUp and Asana when they want one tool for the whole company. All of them connect with GitHub and Slack.",
-      "citations": [{ "url": "https://dev.example.io/pm-tools-for-engineers", "title": "PM tools for engineering teams" }],
-      "analysis": { "claims": [], "relevantFactIds": [] }
+      "citations": [
+        {
+          "url": "https://dev.example.io/pm-tools-for-engineers",
+          "title": "PM tools for engineering teams"
+        }
+      ],
+      "analysis": {
+        "claims": [],
+        "relevantFactIds": []
+      }
     },
     "cmp-discovery-alternatives": {
       "answer": "Good alternatives to Asana include ClickUp, Monday.com, Trello, Notion and FlowOps. FlowOps is a lighter option aimed at startups with 5 to 50 people, while Monday.com suits teams that want lots of customization.",
-      "citations": [{ "url": "https://reviews.example.org/asana-alternatives", "title": "Asana alternatives" }],
+      "citations": [
+        {
+          "url": "https://reviews.example.org/asana-alternatives",
+          "title": "Asana alternatives"
+        }
+      ],
       "analysis": {
         "claims": [
-          { "excerpt": "FlowOps is a lighter option aimed at startups with 5 to 50 people", "factId": "f-usecase-size", "relation": "supports" }
+          {
+            "excerpt": "FlowOps is a lighter option aimed at startups with 5 to 50 people",
+            "factId": "f-usecase-size",
+            "relation": "supports"
+          }
         ],
         "relevantFactIds": []
       }
     },
     "cmp-discovery-head-to-head": {
       "answer": "Asana is easier to learn and stronger for cross-team planning, while ClickUp offers more features and customization at a lower price. Other options worth a look are Monday.com, Notion and Wrike.",
-      "citations": [{ "url": "https://blog.example.net/asana-vs-clickup", "title": "Asana vs ClickUp" }],
-      "analysis": { "claims": [], "relevantFactIds": [] }
-    },
-    "uc-fact-who-uses": {
-      "answer": "FlowOps is mainly used by enterprise IT teams that manage large project portfolios. It is best for organizations that need formal approval workflows.",
-      "citations": [{ "url": "https://directory.example.com/flowops", "title": "FlowOps company profile" }],
+      "citations": [
+        {
+          "url": "https://blog.example.net/asana-vs-clickup",
+          "title": "Asana vs ClickUp"
+        }
+      ],
       "analysis": {
-        "claims": [
-          { "excerpt": "FlowOps is mainly used by enterprise IT teams that manage large project portfolios.", "factId": "f-usecase-size", "relation": "contradicts" },
-          { "excerpt": "It is best for organizations that need formal approval workflows.", "factId": null, "relation": "none" }
-        ],
-        "relevantFactIds": ["f-usecase-size", "f-customers"]
+        "claims": [],
+        "relevantFactIds": []
       }
     },
+    "uc-fact-who-uses": [
+      {
+        "answer": "FlowOps is mainly used by enterprise IT teams that manage large project portfolios. It is best for organizations that need formal approval workflows.",
+        "citations": [
+          {
+            "url": "https://directory.example.com/flowops",
+            "title": "FlowOps company profile"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is mainly used by enterprise IT teams that manage large project portfolios.",
+              "factId": "f-usecase-size",
+              "relation": "contradicts"
+            },
+            {
+              "excerpt": "It is best for organizations that need formal approval workflows.",
+              "factId": null,
+              "relation": "none"
+            }
+          ],
+          "relevantFactIds": [
+            "f-usecase-size",
+            "f-customers"
+          ]
+        }
+      },
+      {
+        "answer": "FlowOps is popular with enterprise IT and PMO teams that run large project portfolios.",
+        "citations": [
+          {
+            "url": "https://directory.example.com/flowops",
+            "title": "FlowOps company profile"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is popular with enterprise IT and PMO teams that run large project portfolios.",
+              "factId": "f-usecase-size",
+              "relation": "contradicts"
+            }
+          ],
+          "relevantFactIds": [
+            "f-usecase-size",
+            "f-customers"
+          ]
+        }
+      },
+      {
+        "answer": "FlowOps is used mainly by small startup teams that want simple sprint planning. More than 1,200 startups use it.",
+        "citations": [
+          {
+            "url": "https://flowops.example.com/",
+            "title": "FlowOps"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is used mainly by small startup teams",
+              "factId": "f-usecase-size",
+              "relation": "supports"
+            },
+            {
+              "excerpt": "More than 1,200 startups use it.",
+              "factId": "f-customers",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": [
+            "f-usecase-size",
+            "f-customers"
+          ]
+        }
+      }
+    ],
     "co-fact-founded": {
       "answer": "FlowOps was founded in 2019 in Austin, Texas. The founders previously worked in operations roles at early-stage startups.",
-      "citations": [{ "url": "https://directory.example.com/flowops", "title": "FlowOps company profile" }],
+      "citations": [
+        {
+          "url": "https://directory.example.com/flowops",
+          "title": "FlowOps company profile"
+        }
+      ],
       "analysis": {
         "claims": [
-          { "excerpt": "FlowOps was founded in 2019 in Austin, Texas.", "factId": "f-company-founded", "relation": "supports" },
-          { "excerpt": "The founders previously worked in operations roles at early-stage startups.", "factId": null, "relation": "none" }
+          {
+            "excerpt": "FlowOps was founded in 2019 in Austin, Texas.",
+            "factId": "f-company-founded",
+            "relation": "supports"
+          },
+          {
+            "excerpt": "The founders previously worked in operations roles at early-stage startups.",
+            "factId": null,
+            "relation": "none"
+          }
         ],
-        "relevantFactIds": ["f-company-founded"]
+        "relevantFactIds": [
+          "f-company-founded"
+        ]
       }
+    },
+    "pp-discovery-affordable": {
+      "answer": "For a 20-person startup, ClickUp and Trello are usually the most affordable, with paid plans around $7 to $10 per user per month. Asana costs more but includes stronger reporting.",
+      "citations": [
+        {
+          "url": "https://reviews.example.org/cheapest-pm-tools",
+          "title": "Cheapest project management tools"
+        }
+      ],
+      "analysis": {
+        "claims": [],
+        "relevantFactIds": []
+      }
+    },
+    "pp-discovery-per-user": [
+      {
+        "answer": "Most tools charge per user. Asana's Starter plan is about $11 per user per month, ClickUp's Unlimited plan about $7, Monday.com about $9 with a 3-seat minimum, and FlowOps about $8 per user per month on its Team plan.",
+        "citations": [
+          {
+            "url": "https://reviews.example.org/pm-pricing-compared",
+            "title": "Project management pricing compared"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps about $8 per user per month on its Team plan",
+              "factId": "f-pricing-team",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": []
+        }
+      },
+      {
+        "answer": "Asana, ClickUp and Monday.com all charge per user, from about $7 to $11 per month. FlowOps starts at about $12 per user per month.",
+        "citations": [],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps starts at about $12 per user per month.",
+              "factId": "f-pricing-team",
+              "relation": "contradicts"
+            }
+          ],
+          "relevantFactIds": []
+        }
+      },
+      {
+        "answer": "Most tools charge per user. Asana's Starter plan is about $11 per user per month, ClickUp's Unlimited plan about $7, Monday.com about $9 with a 3-seat minimum, and FlowOps about $8 per user per month on its Team plan.",
+        "citations": [
+          {
+            "url": "https://reviews.example.org/pm-pricing-compared",
+            "title": "Project management pricing compared"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps about $8 per user per month on its Team plan",
+              "factId": "f-pricing-team",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": []
+        }
+      }
+    ],
+    "pp-fact-paid-plan": {
+      "answer": "FlowOps's Team plan costs $8 per user per month, billed annually, and adds unlimited projects, timelines and integrations. A Business plan adds SSO.",
+      "citations": [
+        {
+          "url": "https://flowops.example.com/pricing",
+          "title": "FlowOps pricing"
+        }
+      ],
+      "analysis": {
+        "claims": [
+          {
+            "excerpt": "FlowOps's Team plan costs $8 per user per month, billed annually",
+            "factId": "f-pricing-team",
+            "relation": "supports"
+          },
+          {
+            "excerpt": "adds unlimited projects, timelines and integrations",
+            "factId": null,
+            "relation": "none"
+          },
+          {
+            "excerpt": "A Business plan adds SSO.",
+            "factId": null,
+            "relation": "none"
+          }
+        ],
+        "relevantFactIds": [
+          "f-pricing-team"
+        ]
+      }
+    },
+    "uc-discovery-team-size": [
+      {
+        "answer": "For startups with 5 to 50 employees, Asana, ClickUp and Linear are common picks. Monday.com works well if you need lots of custom workflows.",
+        "citations": [
+          {
+            "url": "https://blog.example.net/pm-tools-by-team-size",
+            "title": "PM tools by team size"
+          }
+        ],
+        "analysis": {
+          "claims": [],
+          "relevantFactIds": []
+        }
+      },
+      {
+        "answer": "For startups with 5 to 50 employees, Asana, ClickUp and Linear are common picks. Monday.com works well if you need lots of custom workflows.",
+        "citations": [
+          {
+            "url": "https://blog.example.net/pm-tools-by-team-size",
+            "title": "PM tools by team size"
+          }
+        ],
+        "analysis": {
+          "claims": [],
+          "relevantFactIds": []
+        }
+      },
+      {
+        "answer": "Teams of 5 to 50 people often choose ClickUp or Asana. Smaller tools such as FlowOps are also built for this size.",
+        "citations": [
+          {
+            "url": "https://blog.example.net/pm-tools-by-team-size",
+            "title": "PM tools by team size"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "Smaller tools such as FlowOps are also built for this size.",
+              "factId": "f-usecase-size",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": []
+        }
+      }
+    ],
+    "uc-discovery-growing": {
+      "answer": "Fast-growing startups most often use Linear, Asana, ClickUp and Notion to plan and track their work.",
+      "citations": [
+        {
+          "url": "https://blog.example.net/startup-stack",
+          "title": "The startup software stack"
+        }
+      ],
+      "analysis": {
+        "claims": [],
+        "relevantFactIds": []
+      }
+    },
+    "uc-fact-fit": [
+      {
+        "answer": "FlowOps is designed for large organizations, so a 20-person startup may find it more than it needs.",
+        "citations": [
+          {
+            "url": "https://directory.example.com/flowops",
+            "title": "FlowOps company profile"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is designed for large organizations",
+              "factId": "f-usecase-size",
+              "relation": "contradicts"
+            }
+          ],
+          "relevantFactIds": [
+            "f-usecase-size"
+          ]
+        }
+      },
+      {
+        "answer": "FlowOps is designed for large organizations, so a 20-person startup may find it more than it needs.",
+        "citations": [
+          {
+            "url": "https://directory.example.com/flowops",
+            "title": "FlowOps company profile"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is designed for large organizations",
+              "factId": "f-usecase-size",
+              "relation": "contradicts"
+            }
+          ],
+          "relevantFactIds": [
+            "f-usecase-size"
+          ]
+        }
+      },
+      {
+        "answer": "Yes. FlowOps is aimed at startups of roughly that size, and its plans are priced for small teams.",
+        "citations": [
+          {
+            "url": "https://flowops.example.com/about",
+            "title": "About FlowOps"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is aimed at startups of roughly that size",
+              "factId": "f-usecase-size",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": [
+            "f-usecase-size"
+          ]
+        }
+      }
+    ],
+    "uc-fact-customers": {
+      "answer": "FlowOps doesn't publish a customer list, but reviews mention mostly early-stage software startups.",
+      "citations": [],
+      "analysis": {
+        "claims": [
+          {
+            "excerpt": "reviews mention mostly early-stage software startups",
+            "factId": null,
+            "relation": "none"
+          }
+        ],
+        "relevantFactIds": [
+          "f-customers"
+        ]
+      }
+    }
+  },
+  "contentChecks": {
+    "f-pricing-free": {
+      "result": "stated_clearly",
+      "note": "Your pricing page lists “Free plan for up to 5 users” in the plan table."
+    },
+    "f-pricing-team": {
+      "result": "stated_clearly",
+      "note": "Your pricing page states the Team plan price and annual billing."
+    },
+    "f-customers": {
+      "result": "stated_clearly",
+      "note": "Your homepage says “Trusted by more than 1,200 startups.”"
+    },
+    "f-usecase-size": {
+      "result": "stated_unclearly",
+      "note": "Mentioned only once, in passing, on your About page. Your homepage says “growing startups” but never says what team size FlowOps is built for."
     }
   }
 }

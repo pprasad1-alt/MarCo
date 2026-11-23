@@ -8,7 +8,7 @@
  */
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { Audit, AuditRun, Brand, Claim, ExtractedPage, Fact, Gap, SnapshotProgress } from "@/lib/types";
+import type { Action, Audit, AuditRun, Brand, Claim, Draft, ExtractedPage, Fact, Gap, Issue, SnapshotProgress } from "@/lib/types";
 
 export type StoreData = {
   brands: Brand[];
@@ -17,6 +17,9 @@ export type StoreData = {
   auditRuns: AuditRun[];
   claims: Claim[];
   gaps: Gap[];
+  issues: Issue[];
+  actions: Action[];
+  drafts: Draft[];
   progress: SnapshotProgress[];
   /** Website extraction cache, keyed by URL (audit runs are never cached). */
   extractionCache: Record<string, { pages: ExtractedPage[]; cachedAt: string }>;
@@ -29,6 +32,9 @@ const empty = (): StoreData => ({
   auditRuns: [],
   claims: [],
   gaps: [],
+  issues: [],
+  actions: [],
+  drafts: [],
   progress: [],
   extractionCache: {},
 });
@@ -77,9 +83,12 @@ export async function readStore(): Promise<StoreData> {
   return load();
 }
 
-/** Everything needed to show one snapshot. Returns null if the audit doesn't exist. */
+/** Everything needed to show one audit (snapshot or deep). Returns null if it doesn't exist. */
 export async function getSnapshotBundle(auditId: string) {
-  const data = await readStore();
+  return bundleFrom(await readStore(), auditId);
+}
+
+export function bundleFrom(data: StoreData, auditId: string) {
   const audit = data.audits.find((a) => a.id === auditId);
   if (!audit) return null;
   const brand = data.brands.find((b) => b.id === audit.brandId) ?? null;
@@ -93,7 +102,22 @@ export async function getSnapshotBundle(auditId: string) {
     runs,
     claims: data.claims.filter((c) => runIds.has(c.auditRunId)),
     gaps: data.gaps.filter((g) => runIds.has(g.auditRunId)),
+    issues: data.issues.filter((i) => i.auditId === auditId),
+    actions: data.actions.filter((a) => data.issues.some((i) => i.id === a.issueId && i.auditId === auditId)),
+    drafts: data.drafts.filter((d) => data.actions.some((a) => a.id === d.actionId)),
+    extraction: brand ? data.extractionCache[brand.url]?.pages ?? [] : [],
     progress: data.progress.find((p) => p.auditId === auditId) ?? null,
   };
 }
-export type SnapshotBundle = NonNullable<Awaited<ReturnType<typeof getSnapshotBundle>>>;
+export type SnapshotBundle = NonNullable<ReturnType<typeof bundleFrom>>;
+
+/** The action, its issue, the audit bundle, and the latest draft revision. */
+export async function getActionBundle(actionId: string) {
+  const data = await readStore();
+  const action = data.actions.find((a) => a.id === actionId);
+  const issue = action && data.issues.find((i) => i.id === action.issueId);
+  const bundle = issue && bundleFrom(data, issue.auditId);
+  if (!action || !issue || !bundle) return null;
+  const drafts = data.drafts.filter((d) => d.actionId === actionId).sort((a, b) => a.revisionNumber - b.revisionNumber);
+  return { action, issue, bundle, drafts, latestDraft: drafts.at(-1) ?? null };
+}

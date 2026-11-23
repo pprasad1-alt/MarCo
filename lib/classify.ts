@@ -42,6 +42,12 @@ export type ClassifyInput = {
   brandName: string;
   facts: Fact[];
   analysis: AnswerAnalysis;
+  /**
+   * True once the customer has reviewed their facts (deep audits). Then only
+   * findings that rely on a still-unconfirmed fact stay "potential".
+   * Defaults to "every fact is confirmed".
+   */
+  factsReviewed?: boolean;
 };
 
 /** Findings are "potential" unless the facts they rely on are confirmed. */
@@ -49,13 +55,15 @@ export function factsAreConfirmed(facts: Fact[]): boolean {
   return facts.length > 0 && facts.every((f) => f.confirmed);
 }
 
-export function classifyAnswer({ run, prompt, brandName, facts, analysis }: ClassifyInput): {
+export function classifyAnswer({ run, prompt, brandName, facts: allFacts, analysis, factsReviewed }: ClassifyInput): {
   claims: Claim[];
   gaps: Gap[];
 } {
   const answer = run.answer ?? "";
+  // Facts the customer rejected are never used to judge a claim.
+  const facts = allFacts.filter((f) => !f.rejected);
   const factById = new Map(facts.map((f) => [f.id, f]));
-  const allConfirmed = factsAreConfirmed(facts);
+  const reviewed = factsReviewed ?? factsAreConfirmed(facts);
 
   const claims: Claim[] = analysis.claims.map((c, i) => {
     const fact = c.factId ? factById.get(c.factId) : undefined;
@@ -73,7 +81,7 @@ export function classifyAnswer({ run, prompt, brandName, facts, analysis }: Clas
       auditRunId: run.id,
       answerExcerpt: c.excerpt,
       label,
-      potential: !allConfirmed || (matched ? !matched.confirmed : false),
+      potential: !reviewed || (matched ? !matched.confirmed : false),
       matchedFactId: matched?.id ?? null,
       matchedFactVersion: matched?.version ?? null,
       verifiedSourceUrl: matched?.confirmed ? matched.sourceUrl : null,
@@ -90,7 +98,7 @@ export function classifyAnswer({ run, prompt, brandName, facts, analysis }: Clas
       type: "visibility",
       expected: brandName,
       expectedFactId: null,
-      potential: !allConfirmed,
+      potential: !reviewed,
     });
   }
 
@@ -105,7 +113,7 @@ export function classifyAnswer({ run, prompt, brandName, facts, analysis }: Clas
       type: "coverage",
       expected: fact.value,
       expectedFactId: fact.id,
-      potential: !allConfirmed || !fact.confirmed,
+      potential: !reviewed || !fact.confirmed,
     });
   }
 
