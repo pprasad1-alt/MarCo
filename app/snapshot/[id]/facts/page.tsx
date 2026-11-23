@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { FactReview } from "@/components/marco/fact-review";
+import { JourneySteps } from "@/components/marco/journey-steps";
 import { getSnapshotBundle } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Confirm your facts · MarCo" };
@@ -15,8 +16,8 @@ export default async function FactsPage(props: PageProps<"/snapshot/[id]/facts">
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
+      <JourneySteps current="Confirm facts" />
       <header className="space-y-3">
-        <p className="text-sm font-medium text-indigo-600">Step 1 of 2 · Full audit</p>
         <h1 className="text-3xl font-semibold tracking-tight">Confirm your facts</h1>
         <p className="text-slate-600">
           These are the facts MarCo read on your website. Confirm the ones that are right, fix any that are worded badly,

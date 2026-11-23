@@ -4,7 +4,10 @@ import { EvidenceQuote } from "@/components/marco/evidence-quote";
 import { FindingBadge } from "@/components/marco/finding-badge";
 import { MetricTile } from "@/components/marco/metric-tile";
 import { ModeBanner } from "@/components/marco/mode-banner";
+import { JourneySteps } from "@/components/marco/journey-steps";
+import { Logo } from "@/components/marco/logo";
 import { OutcomeBadge } from "@/components/marco/outcome-badge";
+import { SampleNote } from "@/components/marco/sample-note";
 import { StatusPill } from "@/components/marco/status-pill";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,7 +56,10 @@ export default async function StyleguidePage() {
         <p className="text-sm text-slate-500">{current.reason}</p>
       </header>
 
-      <Section title="Mode banners" description="Shown at the top of every screen. The live one is at the very top of this page.">
+      <Section
+        title="Mode banners"
+        description="Shown at the top of every screen. The live one is at the very top of this page."
+      >
         <div className="overflow-hidden rounded-xl border">
           {MODES.map((m) => (
             <ModeBanner key={m} mode={{ mode: m, ...MODE_COPY[m] }} className="last:border-b-0" />
@@ -68,7 +74,10 @@ export default async function StyleguidePage() {
         <Card>
           <CardContent className="divide-y">
             {FINDING_KINDS.map((kind) => (
-              <div key={kind} className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:gap-6">
+              <div
+                key={kind}
+                className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:gap-6"
+              >
                 <div className="flex flex-wrap gap-2 sm:w-[26rem] sm:shrink-0">
                   <FindingBadge kind={kind} />
                   <FindingBadge kind={kind} potential />
@@ -143,7 +152,10 @@ export default async function StyleguidePage() {
         </div>
       </Section>
 
-      <Section title="Status pills" description="Where a corrective action stands. Only the customer can set Published.">
+      <Section
+        title="Status pills"
+        description="Where a corrective action stands. Only the customer can set Published."
+      >
         <div className="flex flex-wrap gap-2">
           {ACTION_STATUSES.map((s) => (
             <StatusPill key={s} status={s} />
@@ -151,7 +163,21 @@ export default async function StyleguidePage() {
         </div>
       </Section>
 
-      <Section title="Action outcomes" description="What MarCo recommends for each issue. New content is only one of three valid outcomes.">
+      <Section
+        title="Logo and journey"
+        description="Placeholder logo until the real one arrives. The step indicator shows where the customer is."
+      >
+        <div className="space-y-6 rounded-xl border p-6">
+          <Logo />
+          <JourneySteps current="Deep audit" />
+          <SampleNote>Sample results for FlowOps, a fictional company.</SampleNote>
+        </div>
+      </Section>
+
+      <Section
+        title="Action outcomes"
+        description="What MarCo recommends for each issue. New content is only one of three valid outcomes."
+      >
         <div className="flex flex-wrap gap-2">
           <OutcomeBadge outcome="correction" />
           <OutcomeBadge outcome="investigate" />

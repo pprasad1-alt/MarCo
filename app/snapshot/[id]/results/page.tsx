@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { FlaskConical, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { AnswersList } from "@/components/marco/answers-list";
 import { FindingCard } from "@/components/marco/finding-card";
-import { MetricTile } from "@/components/marco/metric-tile";
+import { JourneySteps } from "@/components/marco/journey-steps";
+import { SampleNote } from "@/components/marco/sample-note";
+import { Scorecard } from "@/components/marco/scorecard";
 import { Button } from "@/components/ui/button";
 import { buildSnapshotResults } from "@/lib/results";
 import { getSnapshotBundle } from "@/lib/store";
@@ -25,6 +27,7 @@ export default async function SnapshotResultsPage(props: PageProps<"/snapshot/[i
 
   return (
     <div className="space-y-12">
+      <JourneySteps current="Snapshot" />
       <header className="space-y-3">
         <p className="text-sm font-medium text-indigo-600">Free snapshot</p>
         <h1 className="text-3xl font-semibold tracking-tight">How AI describes {brand.name}</h1>
@@ -32,18 +35,15 @@ export default async function SnapshotResultsPage(props: PageProps<"/snapshot/[i
           Based on {runs.length} AI answers · {date}
         </p>
         {isMock && (
-          <p className="flex items-start gap-2 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
-            <FlaskConical className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            <span>
-              Sample results for {brand.name}, a fictional company. You entered{" "}
-              <span className="break-all font-medium">{brand.url}</span>; no real audit was run.
-            </span>
-          </p>
+          <SampleNote>
+            Sample results for {brand.name}, a fictional company. You entered{" "}
+            <span className="break-all">{brand.url}</span>; no real audit was run.
+          </SampleNote>
         )}
         <p className="flex items-start gap-2 text-sm text-slate-600">
           <Info className="mt-0.5 size-4 shrink-0 text-slate-400" aria-hidden="true" />
-          These findings are potential: they compare AI answers with facts read from your website, which you haven&apos;t
-          confirmed yet. A missing mention is a gap, not an error.
+          These findings are potential: they compare AI answers with facts read from your website, which you
+          haven&apos;t confirmed yet. A missing mention is a gap, not an error.
         </p>
       </header>
 
@@ -52,13 +52,11 @@ export default async function SnapshotResultsPage(props: PageProps<"/snapshot/[i
           <h2 id="scorecard" className="text-xl font-semibold tracking-tight">
             Scorecard
           </h2>
-          <p className="text-sm text-slate-500">Separate measures, each shown as a count and a rate. There is no single overall score.</p>
+          <p className="text-sm text-slate-500">
+            Separate measures, each shown as a count and a rate. There is no single overall score.
+          </p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {results.scorecard.map((m) => (
-            <MetricTile key={m.id} {...m} />
-          ))}
-        </div>
+        <Scorecard metrics={results.scorecard} />
       </section>
 
       <section className="space-y-4" aria-labelledby="top-findings">
@@ -66,7 +64,9 @@ export default async function SnapshotResultsPage(props: PageProps<"/snapshot/[i
           <h2 id="top-findings" className="text-xl font-semibold tracking-tight">
             Top {results.topFindings.length || ""} potential findings
           </h2>
-          <p className="text-sm text-slate-500">The issues most likely to matter to buyers, with the AI&apos;s exact words.</p>
+          <p className="text-sm text-slate-500">
+            The issues most likely to matter to buyers, with the AI&apos;s exact words.
+          </p>
         </div>
         {results.topFindings.length > 0 ? (
           <div className="grid gap-4">

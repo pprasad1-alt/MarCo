@@ -7,6 +7,7 @@ import { getMode } from "@/lib/mode";
 import { MOCK_DEEP_AREAS } from "@/lib/mock";
 import { buildSnapshotResults } from "@/lib/results";
 import { getSnapshotBundle } from "@/lib/store";
+import { JourneySteps } from "@/components/marco/journey-steps";
 import { FOCUS_AREAS } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Choose a focus area · MarCo" };
@@ -33,8 +34,8 @@ export default async function FocusPage(props: PageProps<"/snapshot/[id]/focus">
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
+      <JourneySteps current="Deep audit" />
       <header className="space-y-3">
-        <p className="text-sm font-medium text-indigo-600">Step 2 of 2 · Full audit</p>
         <h1 className="text-3xl font-semibold tracking-tight">Choose a focus area</h1>
         <p className="text-slate-600">
           A deep audit looks closely at one area: 5 buyer questions, each asked 3 separate times so one unusual answer

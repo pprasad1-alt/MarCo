@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { SnapshotProgress } from "@/components/marco/snapshot-progress";
 import { getSnapshotBundle } from "@/lib/store";
+import { JourneySteps } from "@/components/marco/journey-steps";
 import { FOCUS_AREA_LABELS } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Running your deep audit · MarCo" };
@@ -15,7 +16,8 @@ export default async function AuditProgressPage(props: PageProps<"/audit/[id]">)
 
   const { auditId, step, index, totalQuestions, status, error } = bundle.progress;
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
+      <JourneySteps current={bundle.audit.type === "re_audit" ? "Re-audit" : "Deep audit"} />
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">
           {bundle.audit.type === "re_audit" ? "Running your re-audit" : "Running your deep audit"}
