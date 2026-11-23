@@ -92,6 +92,8 @@ export const Brand = z.object({
   /** User id; null for anonymous free snapshots. */
   ownerId: Id.nullable(),
   createdAt: Timestamp,
+  /** When the customer finished reviewing facts. Until then, every finding is "potential". */
+  factsReviewedAt: Timestamp.nullable().optional(),
 });
 export type Brand = z.infer<typeof Brand>;
 
@@ -122,6 +124,8 @@ export const Fact = z.object({
   confirmed: z.boolean(),
   version: z.number().int().min(1),
   confirmedAt: Timestamp.nullable(),
+  /** The customer said this fact is wrong; it is never used to check claims. */
+  rejected: z.boolean().optional(),
 });
 export type Fact = z.infer<typeof Fact>;
 
@@ -231,6 +235,10 @@ export type Gap = z.infer<typeof Gap>;
 export const Issue = z.object({
   id: Id,
   auditId: Id,
+  /** What finding type this issue groups (claims of one label, or gaps of one type). */
+  kind: FindingKind,
+  /** "Observed issue" in plain words, e.g. "AI says your free plan covers 10 users". */
+  observedIssue: z.string().min(1),
   claimIds: z.array(Id),
   gapIds: z.array(Id),
   evidenceExcerpt: z.string().min(1),
@@ -244,7 +252,8 @@ export const Issue = z.object({
 export type Issue = z.infer<typeof Issue>;
 
 /** Does the website already state the fact clearly? */
-export const ContentCheckResult = z.enum(["stated_clearly", "stated_unclearly", "not_stated"]);
+/** not_applicable: the issue isn't about one of your facts (e.g. you weren't mentioned at all). */
+export const ContentCheckResult = z.enum(["stated_clearly", "stated_unclearly", "not_stated", "not_applicable"]);
 export type ContentCheckResult = z.infer<typeof ContentCheckResult>;
 
 /** "No correction recommended" and "Further investigation needed" are valid outcomes. */
@@ -258,6 +267,8 @@ export const Action = z.object({
   /** Where the fix should go, e.g. "Pricing page", "Integrations FAQ". */
   destination: z.string().min(1),
   outcome: ActionOutcome,
+  /** What the content check found, in plain words (e.g. which page states the fact). */
+  contentCheckNote: z.string().optional(),
   /** The recommendation in plain words (or the no-action explanation). */
   recommendedAction: z.string().min(1),
   reason: z.string().min(1),
@@ -304,7 +315,7 @@ export const ExtractedPage = z.object({
 });
 export type ExtractedPage = z.infer<typeof ExtractedPage>;
 
-export const SNAPSHOT_STEPS = ["reading", "facts", "asking", "classifying", "done"] as const;
+export const SNAPSHOT_STEPS = ["reading", "facts", "asking", "classifying", "diagnosing", "done"] as const;
 export const SnapshotStep = z.enum(SNAPSHOT_STEPS);
 export type SnapshotStep = z.infer<typeof SnapshotStep>;
 
@@ -312,8 +323,9 @@ export type SnapshotStep = z.infer<typeof SnapshotStep>;
 export const SnapshotProgress = z.object({
   auditId: Id,
   step: SnapshotStep,
-  /** Index of the next question to ask (asking) or answer to classify (classifying). */
+  /** Index of the next answer to get (asking) or classify (classifying). */
   index: z.number().int().min(0),
+  /** Total answers in this audit: 10 for a snapshot, 15 for a deep audit (5 questions x 3 runs). */
   totalQuestions: z.number().int().min(1),
   status: z.enum(["running", "failed", "done"]),
   /** Plain-language error shown with a "Try again" button. */

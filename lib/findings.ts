@@ -4,7 +4,7 @@
  * Color is never the only signal: every badge has an icon AND a text label.
  */
 import { CircleCheck, CircleQuestionMark, EyeOff, Puzzle, TriangleAlert, type LucideIcon } from "lucide-react";
-import type { ClaimLabel, FindingKind, GapType } from "@/lib/types";
+import type { ActionOutcome, ClaimLabel, ContentCheckResult, EvidenceStrength, FactType, FindingKind, FocusArea, GapType } from "@/lib/types";
 
 type FindingStyle = {
   /** Label once facts are confirmed. */
@@ -69,3 +69,44 @@ export function findingKindForClaim(label: ClaimLabel): FindingKind {
 export function findingKindForGap(type: GapType): FindingKind {
   return type === "visibility" ? "visibility_gap" : "coverage_gap";
 }
+
+/** Plain-language names for action outcomes. */
+export const OUTCOME_LABELS: Record<ActionOutcome, string> = {
+  correction: "Correction recommended",
+  investigate: "Further investigation needed",
+  no_correction: "No correction recommended",
+};
+
+export const CONTENT_CHECK_LABELS: Record<ContentCheckResult, string> = {
+  stated_clearly: "Your website already states this clearly",
+  stated_unclearly: "Your website mentions this, but not clearly",
+  not_stated: "Your website doesn't state this",
+  not_applicable: "Not about one of your facts",
+};
+
+export const STRENGTH_LABELS: Record<EvidenceStrength, string> = {
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+
+export const FACT_TYPE_LABELS: Record<FactType, string> = {
+  product_feature: "Product and features",
+  pricing: "Pricing",
+  integration: "Integrations",
+  competitor_positioning: "Positioning",
+  use_case: "Who it's for",
+  customer: "Customers",
+  company: "Company",
+  other: "Other",
+};
+
+/** One line per focus area, shown on the focus area picker. */
+export const FOCUS_AREA_DESCRIPTIONS: Record<FocusArea, string> = {
+  product_features: "What AI says your product does.",
+  pricing_plans: "Plans, prices and free tiers, and whether you show up when buyers compare costs.",
+  integrations: "Which tools AI says you connect with.",
+  comparisons_alternatives: "Whether you're named next to competitors and as an alternative.",
+  use_cases_customers: "Who AI says you're for, and which customers it mentions.",
+  company_credibility: "Your founding story, location and track record.",
+};

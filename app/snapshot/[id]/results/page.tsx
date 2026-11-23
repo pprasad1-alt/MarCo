@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronDown, FlaskConical, Info } from "lucide-react";
-import { EvidenceQuote } from "@/components/marco/evidence-quote";
-import { FindingBadge } from "@/components/marco/finding-badge";
+import { FlaskConical, Info } from "lucide-react";
+import { AnswersList } from "@/components/marco/answers-list";
 import { FindingCard } from "@/components/marco/finding-card";
 import { MetricTile } from "@/components/marco/metric-tile";
 import { Button } from "@/components/ui/button";
 import { buildSnapshotResults } from "@/lib/results";
 import { getSnapshotBundle } from "@/lib/store";
-import { FOCUS_AREA_LABELS } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Your free snapshot · MarCo" };
 
@@ -84,49 +82,7 @@ export default async function SnapshotResultsPage(props: PageProps<"/snapshot/[i
         )}
       </section>
 
-      <section aria-labelledby="all-answers">
-        <details className="group rounded-xl border">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl p-6 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
-            <span>
-              <span id="all-answers" className="block text-xl font-semibold tracking-tight">
-                See all {runs.length} answers
-              </span>
-              <span className="text-sm text-slate-500">Every question we asked and the AI&apos;s full answer.</span>
-            </span>
-            <ChevronDown className="size-5 shrink-0 text-slate-500 transition-transform group-open:rotate-180" aria-hidden="true" />
-          </summary>
-          <ol className="space-y-4 border-t p-4 sm:p-6">
-            {results.answers.map(({ run, prompt, findings }, i) => (
-              <li key={run.id} className="space-y-3 rounded-lg border p-4 sm:p-5">
-                <p className="text-sm text-slate-500">
-                  Question {i + 1} · {FOCUS_AREA_LABELS[prompt.focusArea]} ·{" "}
-                  {prompt.type === "discovery" ? "Discovery (doesn't name you)" : "About your company"}
-                </p>
-                <h3 className="font-semibold text-slate-900">{run.promptText}</h3>
-                <EvidenceQuote quote={run.answer ?? ""} sources={run.rawCitations} />
-                {findings.length > 0 ? (
-                  <ul className="space-y-2">
-                    {findings.map((f) => (
-                      <li key={f.id} className="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
-                        <FindingBadge kind={f.kind} potential={f.potential} className="self-start" />
-                        <span className="text-sm text-slate-700">
-                          {f.kind === "visibility_gap"
-                            ? `${brand.name} wasn't included.`
-                            : f.kind === "coverage_gap"
-                              ? `Left out: ${f.fact?.value ?? "a relevant fact"}.`
-                              : `“${f.quote}”`}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-slate-500">No findings for this answer.</p>
-                )}
-              </li>
-            ))}
-          </ol>
-        </details>
-      </section>
+      <AnswersList answers={results.answers} brandName={brand.name} />
 
       <section className="space-y-4 rounded-xl border bg-slate-50 p-6">
         <div className="space-y-1">

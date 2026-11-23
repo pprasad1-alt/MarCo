@@ -57,3 +57,45 @@ export function toUnconfirmedFacts(brandId: string, extracted: ExtractedWithKey[
     confirmedAt: null,
   }));
 }
+
+// ---------------------------------------------------------------------------
+// Fact review (the customer confirms, edits or rejects each fact)
+// ---------------------------------------------------------------------------
+
+export const FactDecision = z.object({
+  id: z.string().min(1),
+  decision: z.enum(["confirm", "reject", "skip"]),
+  /** The (possibly edited) wording. Plain text only. */
+  value: z.string().trim().min(1, "A fact can't be empty.").max(300, "Keep each fact under 300 characters."),
+});
+export const FactReview = z.object({ decisions: z.array(FactDecision).min(1) });
+export type FactReview = z.infer<typeof FactReview>;
+
+/**
+ * Applies the customer's review to a brand's facts. Editing a fact's wording
+ * creates a new version. Returns an error message instead of saving if the
+ * review is incomplete.
+ */
+export function applyFactReview(
+  facts: Fact[],
+  review: FactReview,
+  at: string,
+): { ok: true; facts: Fact[] } | { ok: false; error: string } {
+  const byId = new Map(review.decisions.map((d) => [d.id, d]));
+  if (review.decisions.some((d) => !facts.some((f) => f.id === d.id))) {
+    return { ok: false, error: "Some facts no longer exist. Reload the page and try again." };
+  }
+  if (!review.decisions.some((d) => d.decision === "confirm")) {
+    return { ok: false, error: "Confirm at least one fact so MarCo has something to check AI answers against." };
+  }
+  const updated = facts.map((f): Fact => {
+    const d = byId.get(f.id);
+    if (!d) return f;
+    const edited = d.value !== f.value;
+    const base = edited ? { ...f, value: d.value, version: f.version + 1 } : f;
+    if (d.decision === "confirm") return { ...base, confirmed: true, confirmedAt: at, rejected: false };
+    if (d.decision === "reject") return { ...base, confirmed: false, confirmedAt: null, rejected: true };
+    return { ...base, confirmed: false, confirmedAt: null, rejected: false };
+  });
+  return { ok: true, facts: updated };
+}

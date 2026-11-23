@@ -4,6 +4,7 @@ import { EvidenceQuote } from "@/components/marco/evidence-quote";
 import { FindingBadge } from "@/components/marco/finding-badge";
 import { MetricTile } from "@/components/marco/metric-tile";
 import { ModeBanner } from "@/components/marco/mode-banner";
+import { OutcomeBadge } from "@/components/marco/outcome-badge";
 import { StatusPill } from "@/components/marco/status-pill";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -147,6 +148,14 @@ export default async function StyleguidePage() {
           {ACTION_STATUSES.map((s) => (
             <StatusPill key={s} status={s} />
           ))}
+        </div>
+      </Section>
+
+      <Section title="Action outcomes" description="What MarCo recommends for each issue. New content is only one of three valid outcomes.">
+        <div className="flex flex-wrap gap-2">
+          <OutcomeBadge outcome="correction" />
+          <OutcomeBadge outcome="investigate" />
+          <OutcomeBadge outcome="no_correction" />
         </div>
       </Section>
 
