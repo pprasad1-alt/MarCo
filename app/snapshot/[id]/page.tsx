@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { SnapshotProgress } from "@/components/marco/snapshot-progress";
+import { JourneySteps } from "@/components/marco/journey-steps";
 import { getSnapshotBundle } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Running your snapshot · MarCo" };
@@ -13,7 +14,8 @@ export default async function SnapshotProgressPage(props: PageProps<"/snapshot/[
 
   const { auditId, step, index, totalQuestions, status, error } = bundle.progress;
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
+      <JourneySteps current="Snapshot" />
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">Running your free snapshot</h1>
         <p className="break-all text-sm text-slate-500">{bundle.brand.url}</p>

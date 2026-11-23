@@ -154,3 +154,29 @@ export function buildSnapshotResults(bundle: SnapshotBundle): SnapshotResults {
     counts,
   };
 }
+
+/**
+ * Issues whose underlying fact changed after the audit (edited, rejected or no
+ * longer confirmed). They're flagged for re-checking rather than silently relabeled.
+ */
+export function staleIssueIds(bundle: SnapshotBundle): Set<string> {
+  const factById = new Map(bundle.facts.map((f) => [f.id, f]));
+  const stale = new Set<string>();
+  for (const issue of bundle.issues) {
+    const claims = bundle.claims.filter((c) => issue.claimIds.includes(c.id));
+    const gaps = bundle.gaps.filter((g) => issue.gapIds.includes(g.id));
+    const changed =
+      claims.some((c) => {
+        if (!c.matchedFactId) return false;
+        const f = factById.get(c.matchedFactId);
+        return !f || f.rejected || !f.confirmed || f.version !== c.matchedFactVersion;
+      }) ||
+      gaps.some((g) => {
+        if (!g.expectedFactId) return false;
+        const f = factById.get(g.expectedFactId);
+        return !f || f.rejected || !f.confirmed;
+      });
+    if (changed) stale.add(issue.id);
+  }
+  return stale;
+}

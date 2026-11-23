@@ -17,7 +17,7 @@ import { AnswerAnalysis, classifyAnswer } from "@/lib/classify";
 import { diagnose } from "@/lib/diagnose";
 import { extractWebsite, NotConnectedError } from "@/lib/extract";
 import { extractFacts, toUnconfirmedFacts } from "@/lib/facts";
-import { getMode, type ModeInfo } from "@/lib/mode";
+import { getMode, modeInfoFor, type ModeInfo } from "@/lib/mode";
 import { MOCK_DEEP_AREAS, MOCK_ERROR_HOST, MOCK_FIXTURE, mockAnswerFor, mockDelay } from "@/lib/mock";
 import { DEEP_RUNS_PER_QUESTION, fillPrompt, getDeepPrompts, getPrompt, getSnapshotPrompts } from "@/lib/prompts";
 import { readStore, updateStore, type StoreData } from "@/lib/store";
@@ -70,7 +70,7 @@ export async function startSnapshot(
 
   await updateStore((data) => {
     data.brands.push(brand);
-    data.audits.push({ id: auditId, brandId, type: "snapshot", focusArea: null, baselineAuditId: null, createdAt });
+    data.audits.push({ id: auditId, brandId, type: "snapshot", focusArea: null, baselineAuditId: null, createdAt, mode: mode.mode });
     data.progress.push({
       auditId,
       step: "reading",
@@ -85,12 +85,19 @@ export async function startSnapshot(
   return { ok: true, auditId };
 }
 
+/** Follow-up audits use the mode of the audit they build on, so a mock sample stays mock. */
+export async function inheritedMode(auditId: string, fallback: ModeInfo): Promise<ModeInfo> {
+  const stored = (await readStore()).audits.find((a) => a.id === auditId)?.mode;
+  return stored ? modeInfoFor(stored) : fallback;
+}
+
 /** Starts a deep audit: 5 questions in one focus area, 3 fresh runs each. Needs reviewed facts. */
 export async function startDeepAudit(
   snapshotId: string,
   focusArea: FocusArea,
-  mode: ModeInfo = getMode(),
+  requestedMode: ModeInfo = getMode(),
 ): Promise<{ ok: true; auditId: string } | { ok: false; error: string }> {
+  const mode = await inheritedMode(snapshotId, requestedMode);
   if (mode.mode !== "MOCK") return { ok: false, error: new NotConnectedError("Live audits").message };
   if (!MOCK_DEEP_AREAS.includes(focusArea)) {
     return {
@@ -106,11 +113,38 @@ export async function startDeepAudit(
     if (!snapshot || !brand) return { ok: false as const, error: "We couldn't find that snapshot. Please start a new one." };
     if (!brand.factsReviewedAt) return { ok: false as const, error: "Confirm your facts before running a deep audit." };
     const total = getDeepPrompts(focusArea).length * DEEP_RUNS_PER_QUESTION;
-    data.audits.push({ id: auditId, brandId: brand.id, type: "deep", focusArea, baselineAuditId: null, createdAt });
+    data.audits.push({ id: auditId, brandId: brand.id, type: "deep", focusArea, baselineAuditId: null, createdAt, mode: mode.mode });
     data.progress.push({ auditId, step: "asking", index: 0, totalQuestions: total, status: "running", error: null, attempts: 0, updatedAt: createdAt });
     return { ok: true as const, auditId };
   });
   return result;
+}
+
+/**
+ * Starts a re-audit: the same 5 questions as the baseline deep audit, 3 fresh runs each.
+ * The baseline is always the original deep audit, so every re-audit compares to the same starting point.
+ */
+export async function startReAudit(
+  auditId: string,
+  requestedMode: ModeInfo = getMode(),
+): Promise<{ ok: true; auditId: string } | { ok: false; error: string }> {
+  const mode = await inheritedMode(auditId, requestedMode);
+  if (mode.mode !== "MOCK") return { ok: false, error: new NotConnectedError("Live audits").message };
+  const newId = randomUUID();
+  const createdAt = now();
+  return updateStore((data) => {
+    const source = data.audits.find((a) => a.id === auditId);
+    const baseline = source?.type === "re_audit" ? data.audits.find((a) => a.id === source.baselineAuditId) : source;
+    if (!baseline || baseline.type !== "deep" || !baseline.focusArea) {
+      return { ok: false as const, error: "Only a finished deep audit can be re-audited." };
+    }
+    const done = data.progress.find((p) => p.auditId === baseline.id)?.status === "done";
+    if (!done) return { ok: false as const, error: "Wait for the deep audit to finish before re-auditing." };
+    const total = getDeepPrompts(baseline.focusArea).length * DEEP_RUNS_PER_QUESTION;
+    data.audits.push({ id: newId, brandId: baseline.brandId, type: "re_audit", focusArea: baseline.focusArea, baselineAuditId: baseline.id, createdAt, mode: mode.mode });
+    data.progress.push({ auditId: newId, step: "asking", index: 0, totalQuestions: total, status: "running", error: null, attempts: 0, updatedAt: createdAt });
+    return { ok: true as const, auditId: newId };
+  });
 }
 
 /** Which question to ask, and which run of it, for each answer slot in an audit. */
@@ -128,7 +162,7 @@ export function auditPlan(audit: Pick<Audit, "type" | "focusArea">): { prompt: P
 async function askAI(
   prompt: Prompt,
   promptText: string,
-  ctx: { mode: ModeInfo; brandUrl: string; userRetries: number; index: number; runNumber: number; isSnapshot: boolean },
+  ctx: { mode: ModeInfo; brandUrl: string; userRetries: number; index: number; runNumber: number; isSnapshot: boolean; isReaudit: boolean },
 ): Promise<{ answer: string; citations: RawCitation[]; modelId: string }> {
   if (ctx.mode.mode !== "MOCK") throw new NotConnectedError("Gemini audits");
   await mockDelay();
@@ -136,15 +170,15 @@ async function askAI(
   if (ctx.isSnapshot && new URL(ctx.brandUrl).hostname === MOCK_ERROR_HOST && ctx.index === 3 && ctx.userRetries === 0) {
     throw new Error("The AI service didn't respond (mock error for testing).");
   }
-  const fixture = mockAnswerFor(prompt.id, ctx.runNumber);
+  const fixture = mockAnswerFor(prompt.id, ctx.runNumber, ctx.isReaudit);
   if (!fixture) throw new Error(`No mock answer for question ${prompt.id}.`);
   void promptText;
   return { answer: fixture.answer, citations: fixture.citations, modelId: "mock-fixture" };
 }
 
-async function analyzeAnswer(run: AuditRun, prompt: Prompt, mode: ModeInfo, brandId: string): Promise<AnswerAnalysis> {
+async function analyzeAnswer(run: AuditRun, prompt: Prompt, mode: ModeInfo, brandId: string, isReaudit: boolean): Promise<AnswerAnalysis> {
   if (mode.mode !== "MOCK") throw new NotConnectedError("Answer classification (Gemini)");
-  const fixture = mockAnswerFor(prompt.id, run.runNumber);
+  const fixture = mockAnswerFor(prompt.id, run.runNumber, isReaudit);
   if (!fixture) throw new Error(`No mock analysis for question ${prompt.id}.`);
   // Fixture fact keys -> this brand's stored fact ids.
   const id = (key: string) => `${brandId}-${key}`;
@@ -166,7 +200,7 @@ function load(data: StoreData, auditId: string) {
   return { progress, audit, brand };
 }
 
-async function runStep(auditId: string, mode: ModeInfo): Promise<SnapshotStatus> {
+async function runStep(auditId: string, requestedMode: ModeInfo): Promise<SnapshotStatus> {
   // Read current state (no work inside the store lock: AI calls can be slow).
   const snapshot = await updateStore((data) => {
     const { progress, brand, audit } = load(data, auditId);
@@ -180,6 +214,8 @@ async function runStep(auditId: string, mode: ModeInfo): Promise<SnapshotStatus>
     };
   });
   const { progress, brand, audit } = snapshot;
+  // An audit keeps the mode it started in (e.g. the mock sample report stays mock when keys are added).
+  const mode = audit.mode ? modeInfoFor(audit.mode) : requestedMode;
   if (progress.status === "done") return toStatus(progress);
 
   const plan = auditPlan(audit);
@@ -217,6 +253,7 @@ async function runStep(auditId: string, mode: ModeInfo): Promise<SnapshotStatus>
           index: progress.index,
           runNumber,
           isSnapshot,
+          isReaudit: audit.type === "re_audit",
         });
         const run: AuditRun = {
           id: `${auditId}-r${progress.index + 1}`,
@@ -248,7 +285,7 @@ async function runStep(auditId: string, mode: ModeInfo): Promise<SnapshotStatus>
         const run = snapshot.runs[progress.index];
         if (!run) throw new Error("An AI answer is missing, so it can't be classified.");
         const prompt = getPrompt(run.promptId);
-        const analysis = await analyzeAnswer(run, prompt, mode, brand.id);
+        const analysis = await analyzeAnswer(run, prompt, mode, brand.id, audit.type === "re_audit");
         const { claims, gaps } = classifyAnswer({
           run,
           prompt,

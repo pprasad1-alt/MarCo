@@ -25,7 +25,18 @@ function initialDecision(f: Fact): Decision {
   return f.confirmed ? "confirm" : "skip";
 }
 
-export function FactReview({ brandId, snapshotId, facts }: { brandId: string; snapshotId: string; facts: Fact[] }) {
+export function FactReview({
+  brandId,
+  snapshotId,
+  facts,
+  returnTo = null,
+}: {
+  brandId: string;
+  snapshotId: string;
+  facts: Fact[];
+  /** Where to go after saving (e.g. back to a report). Defaults to the focus area picker. */
+  returnTo?: string | null;
+}) {
   const router = useRouter();
   const [rows, setRows] = useState<Row[]>(() =>
     facts.map((fact) => ({ fact, decision: initialDecision(fact), value: fact.value, editing: false })),
@@ -55,7 +66,7 @@ export function FactReview({ brandId, snapshotId, facts }: { brandId: string; sn
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? "We couldn't save your facts. Please try again.");
-      router.push(`/snapshot/${snapshotId}/focus`);
+      router.push(returnTo ?? `/snapshot/${snapshotId}/focus`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "We couldn't save your facts. Please try again.");
       setSaving(false);
@@ -181,7 +192,7 @@ export function FactReview({ brandId, snapshotId, facts }: { brandId: string; sn
         <p className="text-sm text-slate-500">Facts you don&apos;t confirm stay unconfirmed, and findings about them stay “potential”.</p>
         <Button size="lg" onClick={save} disabled={saving}>
           {saving && <Loader2 className="animate-spin" aria-hidden="true" />}
-          Save and choose a focus area
+          {returnTo ? "Save and return to the report" : "Save and choose a focus area"}
         </Button>
       </div>
     </div>

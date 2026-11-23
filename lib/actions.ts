@@ -121,3 +121,39 @@ export function setIssueDismissed(issueId: string, dismissed: boolean): Promise<
     return true;
   });
 }
+
+/**
+ * A confirmed fact changed (edited, rejected or unconfirmed) after drafts were written.
+ * Every draft that relies on one of those facts gets a new revision, re-checked
+ * against the current facts, and goes back to "In review" (approval cleared).
+ * Published drafts are left alone: only the customer changes that status.
+ * Returns the ids of the actions sent back to review.
+ */
+export function reopenDraftsForChangedFacts(data: StoreData, brandId: string, changedFactIds: Set<string>): string[] {
+  if (changedFactIds.size === 0) return [];
+  const facts = data.facts.filter((f) => f.brandId === brandId);
+  const auditIds = new Set(data.audits.filter((a) => a.brandId === brandId).map((a) => a.id));
+  const reopened: string[] = [];
+  for (const action of data.actions) {
+    if (action.outcome !== "correction" || action.status === "Published") continue;
+    const issue = data.issues.find((i) => i.id === action.issueId);
+    if (!issue || !auditIds.has(issue.auditId)) continue;
+    const drafts = data.drafts.filter((d) => d.actionId === action.id).sort((a, b) => a.revisionNumber - b.revisionNumber);
+    const latest = drafts.at(-1);
+    if (!latest || !latest.claimChecks.some((c) => c.factId && changedFactIds.has(c.factId))) continue;
+    const links = linksFrom(latest).filter((l) => !(l.factId && changedFactIds.has(l.factId)));
+    data.drafts.push({
+      id: `${action.id}-d${latest.revisionNumber + 1}`,
+      actionId: action.id,
+      revisionNumber: latest.revisionNumber + 1,
+      text: latest.text,
+      claimChecks: checkDraftClaims(latest.text, facts, links),
+      approvedAt: null,
+      exportedAt: null,
+      publishedAt: null,
+    });
+    action.status = "In review";
+    reopened.push(action.id);
+  }
+  return reopened;
+}
