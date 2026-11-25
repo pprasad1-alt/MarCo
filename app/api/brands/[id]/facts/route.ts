@@ -10,7 +10,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/brands/[id]
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Something in the form isn't right." }, { status: 400 });
   }
-  const result = await updateStore((data) => {
+  const result = await updateStore({ brandId: id }, (data) => {
     const brand = data.brands.find((b) => b.id === id);
     if (!brand) return { ok: false as const, error: "We couldn't find that company.", status: 404 };
     const at = new Date().toISOString();

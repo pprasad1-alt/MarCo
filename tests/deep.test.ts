@@ -29,7 +29,7 @@ async function snapshot() {
 async function review(snapshotId: string, decide: (key: string) => FactReview["decisions"][number]["decision"] = () => "confirm") {
   const b = (await getSnapshotBundle(snapshotId))!;
   const decisions = b.facts.map((f) => ({ id: f.id, value: f.value, decision: decide(f.id.slice(b.brand!.id.length + 1)) }));
-  await updateStore((data) => {
+  await updateStore({ brandId: b.brand!.id }, (data) => {
     const applied = applyFactReview(data.facts.filter((f) => f.brandId === b.brand!.id), { decisions }, new Date().toISOString());
     if (!applied.ok) throw new Error(applied.error);
     data.facts = data.facts.filter((f) => f.brandId !== b.brand!.id).concat(applied.facts);

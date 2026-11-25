@@ -54,7 +54,7 @@ function linksFrom(draft: Draft): ClaimLink[] {
 }
 
 export function applyActionOp(actionId: string, input: ActionOp): Promise<ActionResult> {
-  return updateStore((data): ActionResult => {
+  return updateStore({ actionId }, (data): ActionResult => {
     const { action, facts, latest } = context(data, actionId);
     if (!action) return { ok: false, error: "We couldn't find that action.", status: 404 };
     if (action.outcome !== "correction" || !latest) {
@@ -114,7 +114,7 @@ export function applyActionOp(actionId: string, input: ActionOp): Promise<Action
 
 /** The customer says an issue isn't a real problem (or undoes that). */
 export function setIssueDismissed(issueId: string, dismissed: boolean): Promise<boolean> {
-  return updateStore((data) => {
+  return updateStore({ issueId }, (data) => {
     const issue = data.issues.find((i) => i.id === issueId);
     if (!issue) return false;
     issue.rejectedByUser = dismissed;

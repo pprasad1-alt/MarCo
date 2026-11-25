@@ -21,7 +21,7 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 /** Saves a fact review the same way the API route does. */
 async function saveReview(brandId: string, decide: (key: string, value: string) => { decision: "confirm" | "reject" | "skip"; value?: string }) {
-  return updateStore((data) => {
+  return updateStore({ brandId }, (data) => {
     const brandFacts = data.facts.filter((f) => f.brandId === brandId);
     const decisions = brandFacts.map((f) => {
       const d = decide(f.id.slice(brandId.length + 1), f.value);
