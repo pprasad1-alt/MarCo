@@ -23,3 +23,8 @@ create index if not exists marco_index_brand_id on public.marco_index (brand_id)
 -- Only MarCo's server, using the secret key, can access these tables.
 alter table public.marco_brands enable row level security;
 alter table public.marco_index  enable row level security;
+
+-- Give MarCo's server role (used by the secret key) access to these two tables only.
+-- Newer Supabase projects don't grant this automatically for tables made in the SQL editor.
+grant select, insert, update, delete on public.marco_brands to service_role;
+grant select, insert, update, delete on public.marco_index  to service_role;

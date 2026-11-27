@@ -2,7 +2,7 @@
  * MarCo's data layer. Every read and write goes through these functions.
  *
  * Two backends, same data shapes (lib/types.ts):
- *  - Supabase (when NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set):
+ *  - Supabase (when SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY are set):
  *    each brand is one JSON document in `marco_brands`; `marco_index` maps audit,
  *    action and issue ids to their brand. Writes use optimistic locking (a version
  *    number), so two servers saving at once never overwrite each other.
@@ -129,7 +129,8 @@ const fileBackend: StoreBackend = {
 let supabase: StoreBackend | null = null;
 
 export function storeBackend(): StoreBackend {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  // SUPABASE_URL (server-only) is preferred; NEXT_PUBLIC_SUPABASE_URL also works. The URL isn't secret either way.
+  const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL)?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (url && key) {
     supabase ??= createSupabaseBackend(url, key);
