@@ -86,12 +86,30 @@ describe("deep audit", () => {
 
   it("recommends investigation, not new content, when the website already states the fact clearly", async () => {
     const { bundle } = await deep("pricing_plans");
-    const { issue, action } = actionFor(bundle, /Free plan for up to 5 users/);
-    expect(issue.kind).toBe("inaccurate");
+    const { issue, action } = actionFor(bundle, /Team plan costs \$8/);
+    expect(issue).toMatchObject({ kind: "inaccurate", evidenceStrength: "medium" });
     expect(action.contentCheckResult).toBe("stated_clearly");
     expect(action.outcome).toBe("investigate");
-    expect(action.destination).toMatch(/reviews\.example\.org/);
     expect(bundle.drafts.some((d) => d.actionId === action.id)).toBe(false);
+  });
+
+  it("pricing example: asks the listing owner to correct it AND makes the pricing page explicit", async () => {
+    const { bundle } = await deep("pricing_plans");
+    const { issue, action } = actionFor(bundle, /Free plan for up to 5 users/);
+    expect(issue.kind).toBe("inaccurate");
+    expect(action).toMatchObject({ outcome: "correction", contentCheckResult: "stated_unclearly" });
+    expect(action.contentCheckNote).toMatch(/only in the plan comparison table/);
+    expect(action.destination).toMatch(/Request a correction from the listing owner \(reviews\.example\.org\)/);
+    expect(action.destination).toMatch(/pricing page/);
+    const draft = bundle.drafts.find((d) => d.actionId === action.id)!;
+    expect(draft.text).toBe("FlowOps has a free plan for up to 5 users.");
+  });
+
+  it("a question where every answer was accurate gets 'No correction recommended'", async () => {
+    const { bundle } = await deep("pricing_plans");
+    const { issue, action } = actionFor(bundle, /paid plan include.*matched your confirmed facts/);
+    expect(issue).toMatchObject({ kind: "accurate", evidenceStrength: "high" });
+    expect(action.outcome).toBe("no_correction");
   });
 
   it("recommends a correction with a fully supported draft when the site doesn't state it clearly", async () => {
@@ -147,6 +165,15 @@ describe("draft approval and status", () => {
     expect(await applyActionOp(action.id, { op: "approve" })).toMatchObject({ ok: true, action: { status: "Approved" } });
   });
 
+  it("exporting never sets Published", async () => {
+    const action = await correction();
+    await applyActionOp(action.id, { op: "approve" });
+    const exported = await applyActionOp(action.id, { op: "export" });
+    expect(exported).toMatchObject({ ok: true, action: { status: "Exported" }, draft: { publishedAt: null } });
+    const again = await applyActionOp(action.id, { op: "export" });
+    expect(again).toMatchObject({ ok: true, action: { status: "Exported" }, draft: { publishedAt: null } });
+  });
+
   it("only allows Exported after approval, and Published only after export", async () => {
     const action = await correction();
     expect((await applyActionOp(action.id, { op: "export" })).ok).toBe(false);
@@ -166,7 +193,7 @@ describe("draft approval and status", () => {
 
   it("has no draft operations for investigation outcomes", async () => {
     const { bundle } = await deep("pricing_plans");
-    const { action } = actionFor(bundle, /Free plan for up to 5 users/);
+    const { action } = actionFor(bundle, /Team plan costs \$8/);
     expect((await applyActionOp(action.id, { op: "approve" })).ok).toBe(false);
   });
 });

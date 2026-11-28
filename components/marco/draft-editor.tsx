@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CircleAlert, CircleCheck, Copy, Download, Link2, Loader2, Send, TriangleAlert } from "lucide-react";
+import { CircleAlert, CircleCheck, Copy, Download, Link2, Loader2, Send } from "lucide-react";
+import { LocalDate } from "@/components/marco/local-date";
 import { StatusPill } from "@/components/marco/status-pill";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { checkDraftClaims, type ClaimLink } from "@/lib/drafts";
+import { draftToHtml, draftToMarkdown } from "@/lib/export";
 import type { Action, Draft, Fact } from "@/lib/types";
 
 type Props = {
@@ -27,16 +29,21 @@ type Props = {
   brandName: string;
 };
 
-function fmt(ts: string | null) {
-  return ts ? new Date(ts).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : null;
-}
 
 function linksFrom(draft: Draft): ClaimLink[] {
-  return draft.claimChecks.filter((c) => c.factId || c.sourceUrl).map((c) => ({ claimText: c.claimText, factId: c.factId, sourceUrl: c.sourceUrl }));
+  return draft.claimChecks
+    .filter((c) => c.factId || c.sourceUrl)
+    .map((c) => ({ claimText: c.claimText, factId: c.factId, sourceUrl: c.sourceUrl }));
 }
 
 /** Link one unsupported sentence to a confirmed fact or a source URL. */
-function LinkControls({ facts, onLink }: { facts: Fact[]; onLink: (link: { factId?: string; sourceUrl?: string }) => void }) {
+function LinkControls({
+  facts,
+  onLink,
+}: {
+  facts: Fact[];
+  onLink: (link: { factId?: string; sourceUrl?: string }) => void;
+}) {
   const [factId, setFactId] = useState("");
   const [url, setUrl] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -113,7 +120,17 @@ export function DraftEditor({ actionId, initialAction, initialDraft, facts, bran
     const res = await fetch(`/api/actions/${actionId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(op === "save" ? { op, text: text.trim(), links: checks.filter((c) => c.supported).map((c) => ({ claimText: c.claimText, factId: c.factId, sourceUrl: c.sourceUrl })) } : { op }),
+      body: JSON.stringify(
+        op === "save"
+          ? {
+              op,
+              text: text.trim(),
+              links: checks
+                .filter((c) => c.supported)
+                .map((c) => ({ claimText: c.claimText, factId: c.factId, sourceUrl: c.sourceUrl })),
+            }
+          : { op },
+      ),
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error ?? "Something went wrong. Please try again.");
@@ -123,13 +140,14 @@ export function DraftEditor({ actionId, initialAction, initialDraft, facts, bran
     return body as { action: Action; draft: Draft };
   }
 
-  async function run(op: "save" | "approve" | "export" | "publish") {
+  async function run(op: "save" | "approve" | "export" | "publish", format: "md" | "html" = "md") {
     setBusy(op);
     setError(null);
     try {
       if (op === "approve" && dirty) await call("save");
       const result = await call(op);
-      if (op === "export") download(result.draft);
+      // Exporting downloads a file. It never marks the draft as published.
+      if (op === "export") download(result.draft, format);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -138,33 +156,16 @@ export function DraftEditor({ actionId, initialAction, initialDraft, facts, bran
     }
   }
 
-  function exportText(d: Draft) {
-    const lines = [
-      `# Correction draft for ${brandName}`,
-      "",
-      `Destination: ${action.destination}`,
-      `Revision ${d.revisionNumber}, approved ${fmt(d.approvedAt) ?? ""}`,
-      "",
-      d.text,
-      "",
-      "## Where each sentence comes from",
-      "",
-      ...d.claimChecks.map((c) => {
-        const f = c.factId ? factById.get(c.factId) : undefined;
-        return `- “${c.claimText}” → ${f ? `confirmed fact: ${f.value} (${f.sourceUrl})` : c.sourceUrl ?? "unlinked"}`;
-      }),
-      "",
-      "Exported from MarCo. MarCo never publishes anything; publish this yourself, then mark it as published.",
-    ];
-    return lines.join("\n");
-  }
-
-  function download(d: Draft) {
-    const blob = new Blob([exportText(d)], { type: "text/markdown;charset=utf-8" });
+  function download(d: Draft, format: "md" | "html") {
+    const ctx = { brandName, destination: action.draftDestination ?? action.destination, facts };
+    const content = format === "md" ? draftToMarkdown(d, ctx) : draftToHtml(d, ctx);
+    const blob = new Blob([content], {
+      type: format === "md" ? "text/markdown;charset=utf-8" : "text/html;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${brandName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-correction-r${d.revisionNumber}.md`;
+    a.download = `${brandName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-correction-r${d.revisionNumber}.${format}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -195,67 +196,83 @@ export function DraftEditor({ actionId, initialAction, initialDraft, facts, bran
         {dirty && <span className="text-sm text-amber-800">Unsaved changes</span>}
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="draft-text" className="text-sm font-medium text-slate-700">
-          Draft text
-        </label>
-        <Textarea
-          id="draft-text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={5}
-          maxLength={5000}
-          disabled={published}
-          className="text-base"
-        />
-        <p className="text-sm text-slate-500">Plain text. Every sentence must link to a confirmed fact or a source before you can approve it.</p>
-      </div>
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+        <div className="space-y-1">
+          <label htmlFor="draft-text" className="text-sm font-medium text-slate-700">
+            Draft text
+          </label>
+          <Textarea
+            id="draft-text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={8}
+            maxLength={5000}
+            disabled={published}
+            className="text-base"
+          />
+          <p className="text-sm text-slate-500">
+            Plain text. Every sentence must link to a confirmed fact or a source before you can approve it.
+          </p>
+        </div>
 
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-slate-700">
-          Claim check: {checks.length - unsupported} of {checks.length} sentences linked
-        </h3>
-        <ul className="space-y-2">
-          {checks.map((c, i) => {
-            const fact = c.factId ? factById.get(c.factId) : undefined;
-            return (
-              <li key={`${i}-${c.claimText}`} className="rounded-lg border p-3 text-sm">
-                <div className="flex items-start gap-2">
-                  {c.supported ? (
-                    <CircleCheck className="mt-0.5 size-4 shrink-0 text-green-700" aria-hidden="true" />
-                  ) : (
-                    <TriangleAlert className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden="true" />
-                  )}
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-slate-900">{c.claimText}</p>
-                    <p className={c.supported ? "text-slate-500" : "font-medium text-red-700"}>
-                      {c.supported
-                        ? fact
-                          ? `Linked to confirmed fact: ${fact.value}`
-                          : `Linked to source: ${c.sourceUrl}`
-                        : "Not linked yet: link it, or remove it from the draft."}
-                    </p>
-                    {c.supported && links.some((l) => l.claimText === c.claimText) && !published && (
-                      <button
-                        type="button"
-                        className="text-sm text-indigo-600 hover:underline"
-                        onClick={() => setLinks((ls) => ls.filter((l) => l.claimText !== c.claimText))}
-                      >
-                        Remove link
-                      </button>
+        <div className="space-y-2 lg:rounded-xl lg:border lg:bg-slate-50 lg:p-4">
+          <h3 className="text-sm font-medium text-slate-700">
+            Claim checks: {checks.length - unsupported} of {checks.length} sentences linked
+          </h3>
+          <ul className="space-y-2">
+            {checks.map((c, i) => {
+              const fact = c.factId ? factById.get(c.factId) : undefined;
+              return (
+                <li
+                  key={`${i}-${c.claimText}`}
+                  className={
+                    c.supported
+                      ? "rounded-lg border bg-white p-3 text-sm"
+                      : "rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm"
+                  }
+                >
+                  <div className="flex items-start gap-2">
+                    {c.supported ? (
+                      <CircleCheck className="mt-0.5 size-4 shrink-0 text-green-700" aria-hidden="true" />
+                    ) : (
+                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden="true" />
                     )}
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-slate-900">{c.claimText}</p>
+                      <p className={c.supported ? "text-slate-500" : "font-medium text-amber-800"}>
+                        {c.supported
+                          ? fact
+                            ? `Linked to confirmed fact: ${fact.value}`
+                            : `Linked to source: ${c.sourceUrl}`
+                          : "Unsupported: edit or remove (or link it to a confirmed fact or source below)."}
+                      </p>
+                      {c.supported && links.some((l) => l.claimText === c.claimText) && !published && (
+                        <button
+                          type="button"
+                          className="text-sm text-indigo-600 hover:underline"
+                          onClick={() => setLinks((ls) => ls.filter((l) => l.claimText !== c.claimText))}
+                        >
+                          Remove link
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-                {!c.supported && !published && (
-                  <LinkControls
-                    facts={confirmed}
-                    onLink={(l) => setLinks((ls) => [...ls.filter((x) => x.claimText !== c.claimText), { claimText: c.claimText, ...l }])}
-                  />
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  {!c.supported && !published && (
+                    <LinkControls
+                      facts={confirmed}
+                      onLink={(l) =>
+                        setLinks((ls) => [
+                          ...ls.filter((x) => x.claimText !== c.claimText),
+                          { claimText: c.claimText, ...l },
+                        ])
+                      }
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </div>
 
       {error && (
@@ -277,8 +294,9 @@ export function DraftEditor({ actionId, initialAction, initialDraft, facts, bran
               Save draft
             </Button>
             {unsupported > 0 && (
-              <span className="text-sm text-slate-600">
-                Approval is blocked: {unsupported} {unsupported === 1 ? "sentence isn't" : "sentences aren't"} linked yet.
+              <span className="text-sm text-amber-800">
+                Approval is blocked: {unsupported} {unsupported === 1 ? "sentence is" : "sentences are"} unsupported.
+                Edit, remove or link {unsupported === 1 ? "it" : "them"}.
               </span>
             )}
           </>
@@ -286,11 +304,18 @@ export function DraftEditor({ actionId, initialAction, initialDraft, facts, bran
 
         {approved && !exported && (
           <>
-            <Button onClick={() => run("export")} disabled={busy !== null}>
-              {busy === "export" ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Download aria-hidden="true" />}
-              Export draft
+            <Button onClick={() => run("export", "md")} disabled={busy !== null}>
+              {busy === "export" ? (
+                <Loader2 className="animate-spin" aria-hidden="true" />
+              ) : (
+                <Download aria-hidden="true" />
+              )}
+              Export as Markdown
             </Button>
-            <Button variant="outline" onClick={copy}>
+            <Button variant="outline" onClick={() => run("export", "html")} disabled={busy !== null}>
+              <Download aria-hidden="true" /> Export as HTML
+            </Button>
+            <Button variant="ghost" onClick={copy}>
               <Copy aria-hidden="true" /> {copied ? "Copied" : "Copy text"}
             </Button>
           </>
@@ -308,8 +333,9 @@ export function DraftEditor({ actionId, initialAction, initialDraft, facts, bran
                 <DialogHeader>
                   <DialogTitle>Mark as published?</DialogTitle>
                   <DialogDescription>
-                    Only do this after you have published the change on your {action.destination.toLowerCase()} yourself.
-                    MarCo never publishes anything for you. A re-audit can then check whether AI answers change.
+                    Only do this after you have published the change on your {action.destination.toLowerCase()}{" "}
+                    yourself. MarCo never publishes anything for you. A re-audit can then check whether AI answers
+                    change.
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
@@ -322,16 +348,22 @@ export function DraftEditor({ actionId, initialAction, initialDraft, facts, bran
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" onClick={() => download(draft)}>
-              <Download aria-hidden="true" /> Download again
+            <Button variant="outline" onClick={() => download(draft, "md")}>
+              <Download aria-hidden="true" /> Markdown
             </Button>
+            <Button variant="outline" onClick={() => download(draft, "html")}>
+              <Download aria-hidden="true" /> HTML
+            </Button>
+            <span className="w-full text-sm text-slate-500">
+              Exported. Publish it on your own site, then come back and mark it as published.
+            </span>
           </>
         )}
 
         {published && (
           <p className="flex items-center gap-2 text-sm text-green-800">
             <CircleCheck className="size-4" aria-hidden="true" />
-            You marked this as published on {fmt(draft.publishedAt)}.
+            You marked this as published on {draft.publishedAt && <LocalDate iso={draft.publishedAt} withTime />}.
           </p>
         )}
       </div>
@@ -339,15 +371,15 @@ export function DraftEditor({ actionId, initialAction, initialDraft, facts, bran
       <dl className="grid gap-1 text-sm text-slate-500 sm:grid-cols-3">
         <div>
           <dt className="inline">Approved: </dt>
-          <dd className="inline">{fmt(draft.approvedAt) ?? "Not yet"}</dd>
+          <dd className="inline">{draft.approvedAt ? <LocalDate iso={draft.approvedAt} withTime /> : "Not yet"}</dd>
         </div>
         <div>
           <dt className="inline">Exported: </dt>
-          <dd className="inline">{fmt(draft.exportedAt) ?? "Not yet"}</dd>
+          <dd className="inline">{draft.exportedAt ? <LocalDate iso={draft.exportedAt} withTime /> : "Not yet"}</dd>
         </div>
         <div>
           <dt className="inline">Published: </dt>
-          <dd className="inline">{fmt(draft.publishedAt) ?? "Not yet"}</dd>
+          <dd className="inline">{draft.publishedAt ? <LocalDate iso={draft.publishedAt} withTime /> : "Not yet"}</dd>
         </div>
       </dl>
     </div>

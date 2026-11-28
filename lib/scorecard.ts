@@ -14,7 +14,12 @@ export type Metric = {
   explanation: string;
   howCalculated: string;
   notApplicableReason?: string;
+  /** Small secondary line under the explanation, e.g. "Any source listed: 4 of 5". */
+  secondary?: string;
 };
+
+/** How often each competitor (and the brand itself) was named in discovery answers. */
+export type CompetitorMention = { name: string; count: number; total: number; isBrand: boolean };
 
 export type ScorecardInput = {
   runs: AuditRun[];
@@ -22,16 +27,56 @@ export type ScorecardInput = {
   claims: Claim[];
   gaps: Gap[];
   competitors: string[];
+  brandName?: string;
+  /** Hostnames that count as the company's own website (e.g. its domain and the pages facts came from). */
+  ownHosts?: string[];
 };
 
-export function computeScorecard({ runs, promptFor, claims, gaps, competitors }: ScorecardInput): Metric[] {
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+/** Does this answer cite the company's own website? (Subdomains count.) */
+export function citesOwnSite(run: AuditRun, ownHosts: string[]): boolean {
+  const own = ownHosts.map((h) => h.toLowerCase().replace(/^www\./, ""));
+  return run.rawCitations.some((c) => {
+    const h = hostOf(c.url);
+    return Boolean(h) && own.some((o) => h === o || h!.endsWith(`.${o}`));
+  });
+}
+
+/** Each competitor, plus the brand itself, with how many discovery answers named it. */
+export function competitorMentions({ runs, promptFor, gaps, competitors, brandName }: ScorecardInput): CompetitorMention[] {
+  const discovery = runs.filter((r) => r.status === "completed" && r.answer && promptFor(r).type === "discovery");
+  const rows = competitors.map((name) => ({
+    name,
+    count: discovery.filter((r) => mentionsBrand(r.answer ?? "", name)).length,
+    total: discovery.length,
+    isBrand: false,
+  }));
+  if (brandName) {
+    rows.push({
+      name: brandName,
+      // Same rule as the unaided mention rate: no visibility gap = the brand was included.
+      count: discovery.filter((r) => !gaps.some((g) => g.auditRunId === r.id && g.type === "visibility")).length,
+      total: discovery.length,
+      isBrand: true,
+    });
+  }
+  return rows;
+}
+
+export function computeScorecard({ runs, promptFor, claims, gaps, ownHosts = [] }: ScorecardInput): Metric[] {
   const completed = runs.filter((r) => r.status === "completed" && r.answer);
   const discovery = completed.filter((r) => promptFor(r).type === "discovery");
   const factQs = completed.filter((r) => promptFor(r).type === "fact_verification");
   const gapsFor = (r: AuditRun, type: Gap["type"]) => gaps.some((g) => g.auditRunId === r.id && g.type === type);
 
   const mentioned = discovery.filter((r) => !gapsFor(r, "visibility")).length;
-  const withCompetitor = discovery.filter((r) => competitors.some((c) => mentionsBrand(r.answer ?? "", c))).length;
 
   // Only claims checked against CONFIRMED facts count toward verified accuracy.
   const verifiable = claims.filter((c) => !c.potential && c.label !== "unverifiable");
@@ -39,7 +84,8 @@ export function computeScorecard({ runs, promptFor, claims, gaps, competitors }:
 
   const unsupported = claims.filter((c) => c.label === "unverifiable").length;
   const withCoverageGap = factQs.filter((r) => gapsFor(r, "coverage")).length;
-  const cited = (rs: AuditRun[]) => rs.filter((r) => r.rawCitations.length > 0).length;
+  const anySource = (rs: AuditRun[]) => rs.filter((r) => r.rawCitations.length > 0).length;
+  const ownSite = (rs: AuditRun[]) => rs.filter((r) => citesOwnSite(r, ownHosts)).length;
 
   return [
     {
@@ -50,15 +96,6 @@ export function computeScorecard({ runs, promptFor, claims, gaps, competitors }:
       explanation: "Buyer questions where the AI mentioned you without being asked about you.",
       howCalculated:
         "Discovery and comparison answers that name your company, divided by all discovery and comparison answers. These questions never mention your company.",
-    },
-    {
-      id: "competitor-inclusion",
-      label: "Competitor inclusion",
-      count: withCompetitor,
-      total: discovery.length,
-      explanation: "Buyer questions where the AI named at least one of your competitors.",
-      howCalculated:
-        "Discovery and comparison answers that name at least one competitor you listed, divided by all discovery and comparison answers.",
     },
     {
       id: "verified-accuracy",
@@ -89,21 +126,23 @@ export function computeScorecard({ runs, promptFor, claims, gaps, competitors }:
     },
     {
       id: "citations-discovery",
-      label: "Citation rate: discovery questions",
-      count: cited(discovery),
+      label: "Cited your website: discovery questions",
+      count: ownSite(discovery),
       total: discovery.length,
-      explanation: "Discovery answers that listed any source.",
+      explanation: "Discovery answers that cited a page on your website.",
       howCalculated:
-        "Discovery and comparison answers that returned at least one citation, divided by all of them. No citations means evidence is unavailable, not that the answer is wrong.",
+        "Discovery and comparison answers that listed at least one page from your own website as a source, divided by all of them. No citations means evidence is unavailable, not that the answer is wrong.",
+      secondary: `Any source listed: ${anySource(discovery)} of ${discovery.length}`,
     },
     {
       id: "citations-fact",
-      label: "Citation rate: fact questions",
-      count: cited(factQs),
+      label: "Cited your website: fact questions",
+      count: ownSite(factQs),
       total: factQs.length,
-      explanation: "Answers about you that listed any source.",
+      explanation: "Answers about you that cited a page on your website.",
       howCalculated:
-        "Fact-verification answers that returned at least one citation, divided by all of them. No citations means evidence is unavailable, not that the answer is wrong.",
+        "Fact-verification answers that listed at least one page from your own website as a source, divided by all of them. No citations means evidence is unavailable, not that the answer is wrong.",
+      secondary: `Any source listed: ${anySource(factQs)} of ${factQs.length}`,
     },
   ];
 }

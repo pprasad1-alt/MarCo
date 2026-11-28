@@ -4,7 +4,7 @@
  * Color is never the only signal: every badge has an icon AND a text label.
  */
 import { CircleCheck, CircleQuestionMark, EyeOff, Puzzle, TriangleAlert, type LucideIcon } from "lucide-react";
-import type { ActionOutcome, ClaimLabel, ContentCheckResult, EvidenceStrength, FactType, FindingKind, FocusArea, GapType } from "@/lib/types";
+import { FOCUS_AREA_LABELS, type ActionOutcome, type ClaimLabel, type ContentCheckResult, type EvidenceStrength, type FactType, type FindingKind, type FocusArea, type GapType } from "@/lib/types";
 
 type FindingStyle = {
   /** Label once facts are confirmed. */
@@ -90,16 +90,22 @@ export const STRENGTH_LABELS: Record<EvidenceStrength, string> = {
   low: "Low",
 };
 
-export const FACT_TYPE_LABELS: Record<FactType, string> = {
-  product_feature: "Product and features",
-  pricing: "Pricing",
-  integration: "Integrations",
-  competitor_positioning: "Positioning",
-  use_case: "Who it's for",
-  customer: "Customers",
-  company: "Company",
-  other: "Other",
+/** Every fact belongs to one of the six focus areas. */
+export const FACT_TYPE_FOCUS: Record<FactType, FocusArea> = {
+  product_feature: "product_features",
+  pricing: "pricing_plans",
+  integration: "integrations",
+  competitor_positioning: "comparisons_alternatives",
+  use_case: "use_cases_customers",
+  customer: "use_cases_customers",
+  company: "company_credibility",
+  other: "product_features",
 };
+
+/** Fact labels use the focus area names (e.g. "Pricing and plans"). */
+export const FACT_TYPE_LABELS: Record<FactType, string> = Object.fromEntries(
+  Object.entries(FACT_TYPE_FOCUS).map(([type, area]) => [type, FOCUS_AREA_LABELS[area]]),
+) as Record<FactType, string>;
 
 /** One line per focus area, shown on the focus area picker. */
 export const FOCUS_AREA_DESCRIPTIONS: Record<FocusArea, string> = {

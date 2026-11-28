@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
+import { DebugLinks } from "@/components/marco/debug-links";
 import { LiveModeBanner } from "@/components/marco/live-mode";
 import { Logo } from "@/components/marco/logo";
 import "./globals.css";
@@ -46,9 +47,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <footer className="border-t">
           <div className="mx-auto flex max-w-[960px] flex-col gap-2 px-4 py-6 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <span>MarCo prototype · AI answers are samples, and improvements are not guaranteed.</span>
-            <Link href="/styleguide" className="hover:text-slate-700 hover:underline">
-              Style guide
-            </Link>
+            <Suspense>
+              <DebugLinks />
+            </Suspense>
           </div>
         </footer>
       </body>

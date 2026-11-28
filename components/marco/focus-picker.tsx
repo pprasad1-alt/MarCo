@@ -2,17 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CircleAlert, Loader2 } from "lucide-react";
+import { CircleAlert, Loader2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FOCUS_AREA_DESCRIPTIONS } from "@/lib/findings";
 import { cn } from "@/lib/utils";
 import { FOCUS_AREA_LABELS, type FocusArea } from "@/lib/types";
 
-type Option = { area: FocusArea; findings: number; available: boolean; unavailableReason?: string };
+type Option = {
+  area: FocusArea;
+  findings: number;
+  /** Findings with buyer relevance x business impact of 6 or more. */
+  highPriority: number;
+  recommended: boolean;
+  available: boolean;
+  unavailableReason?: string;
+};
 
 export function FocusPicker({ snapshotId, options }: { snapshotId: string; options: Option[] }) {
   const router = useRouter();
-  const firstAvailable = [...options].filter((o) => o.available).sort((a, b) => b.findings - a.findings)[0]?.area ?? null;
+  const firstAvailable =
+    options.find((o) => o.recommended)?.area ??
+    [...options].filter((o) => o.available).sort((a, b) => b.findings - a.findings)[0]?.area ??
+    null;
   const [selected, setSelected] = useState<FocusArea | null>(firstAvailable);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -59,8 +70,15 @@ export function FocusPicker({ snapshotId, options }: { snapshotId: string; optio
               className="mt-1 size-4 accent-indigo-600"
             />
             <span className="space-y-1">
-              <span className={cn("block font-semibold", o.available ? "text-slate-900" : "text-slate-500")}>
-                {FOCUS_AREA_LABELS[o.area]}
+              <span className="flex flex-wrap items-center gap-2">
+                <span className={cn("font-semibold", o.available ? "text-slate-900" : "text-slate-500")}>
+                  {FOCUS_AREA_LABELS[o.area]}
+                </span>
+                {o.recommended && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800">
+                    <Star className="size-3" aria-hidden="true" /> Recommended
+                  </span>
+                )}
               </span>
               <span className={cn("block text-sm", o.available ? "text-slate-600" : "text-slate-500")}>
                 {FOCUS_AREA_DESCRIPTIONS[o.area]}
@@ -68,7 +86,7 @@ export function FocusPicker({ snapshotId, options }: { snapshotId: string; optio
               <span className="block text-sm text-slate-500">
                 {o.available
                   ? o.findings > 0
-                    ? `${o.findings} potential ${o.findings === 1 ? "finding" : "findings"} in your snapshot`
+                    ? `${o.findings} potential ${o.findings === 1 ? "finding" : "findings"} in your snapshot, ${o.highPriority} high priority`
                     : "No findings in your snapshot"
                   : o.unavailableReason}
               </span>
@@ -88,7 +106,7 @@ export function FocusPicker({ snapshotId, options }: { snapshotId: string; optio
         <p className="text-sm text-slate-500">5 buyer questions, each asked 3 times. Takes about a minute.</p>
         <Button size="lg" onClick={start} disabled={starting || !selected}>
           {starting && <Loader2 className="animate-spin" aria-hidden="true" />}
-          Run deep audit
+          Run deep audit (5 questions, 3 runs each)
         </Button>
       </div>
     </div>

@@ -6,7 +6,15 @@ import { Loader2, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /** Starts a re-audit of the same questions. Secondary action on the report. */
-export function ReauditButton({ auditId, label = "Run a re-audit" }: { auditId: string; label?: string }) {
+export function ReauditButton({
+  auditId,
+  label = "Run a re-audit",
+  primary = false,
+}: {
+  auditId: string;
+  label?: string;
+  primary?: boolean;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +33,7 @@ export function ReauditButton({ auditId, label = "Run a re-audit" }: { auditId: 
   }
   return (
     <span className="inline-flex flex-col gap-1">
-      <Button variant="outline" onClick={start} disabled={busy}>
+      <Button variant={primary ? "default" : "outline"} size={primary ? "lg" : "default"} onClick={start} disabled={busy}>
         {busy ? <Loader2 className="animate-spin" aria-hidden="true" /> : <RotateCw aria-hidden="true" />}
         {label}
       </Button>

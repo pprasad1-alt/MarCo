@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ChevronDown, TriangleAlert } from "lucide-react";
-import { DraftEditor } from "@/components/marco/draft-editor";
+import { ArrowLeft, ChevronDown, PenLine, TriangleAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { EvidenceQuote } from "@/components/marco/evidence-quote";
 import { FindingBadge } from "@/components/marco/finding-badge";
 import { JourneySteps } from "@/components/marco/journey-steps";
@@ -65,6 +65,8 @@ export default async function ActionPage(props: PageProps<"/action/[id]">) {
   const stale = staleIssueIds(bundle).has(issue.id);
 
   const [firstEvidence, ...moreEvidence] = evidence;
+  // Until the customer opens the editor, the draft is untouched: offer to "generate" it.
+  const firstLook = action.status === "Draft" && latestDraft?.revisionNumber === 1;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -107,23 +109,28 @@ export default async function ActionPage(props: PageProps<"/action/[id]">) {
         </div>
         <div className="space-y-4">
           <div className="space-y-1">
-            <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Destination</h2>
+            <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Correction destination</h2>
             <p className="text-slate-800">{action.destination}</p>
           </div>
           <div className="space-y-1">
             <p className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Status</p>
             {action.outcome === "correction" ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <StatusPill status={action.status} />
-                <a href="#draft" className="text-sm text-indigo-600 hover:underline">
-                  Go to the draft
-                </a>
-              </div>
+              <StatusPill status={action.status} />
             ) : (
               <p className="text-sm text-slate-600">No draft needed</p>
             )}
           </div>
         </div>
+        {action.outcome === "correction" && latestDraft && (
+          <div className="sm:col-span-2">
+            <Button asChild size="lg">
+              <Link href={`/action/${action.id}/draft`}>
+                <PenLine aria-hidden="true" />
+                {firstLook ? "Generate draft" : "Open draft"}
+              </Link>
+            </Button>
+          </div>
+        )}
       </section>
 
       <div className="space-y-5 rounded-xl border p-5 sm:p-6">
@@ -211,27 +218,26 @@ export default async function ActionPage(props: PageProps<"/action/[id]">) {
 
         <Field label="Reason">{action.reason}</Field>
 
-        <div id="draft" className="scroll-mt-6">
-          <Field label="Draft and status">
-            {action.outcome === "correction" && latestDraft ? (
-              <DraftEditor
-                actionId={action.id}
-                initialAction={action}
-                initialDraft={latestDraft}
-                facts={bundle.facts}
-                brandName={brand.name}
-              />
-            ) : (
-              <p className="text-slate-600">
-                No draft.{" "}
-                {action.outcome === "no_correction"
-                  ? "Nothing needs to change right now."
-                  : "This needs checking before anything is written."}{" "}
-                MarCo only drafts content when the diagnosis shows it&apos;s needed.
+        <Field label="Status">
+          {action.outcome === "correction" && latestDraft ? (
+            <div className="space-y-1">
+              <StatusPill status={action.status} />
+              <p className="text-sm text-slate-600">
+                {firstLook
+                  ? "MarCo drafts the correction from your confirmed facts. You review, edit and approve it; nothing is published for you."
+                  : `Draft revision ${latestDraft.revisionNumber}.`}
               </p>
-            )}
-          </Field>
-        </div>
+            </div>
+          ) : (
+            <p className="text-slate-600">
+              No draft.{" "}
+              {action.outcome === "no_correction"
+                ? "Nothing needs to change right now."
+                : "This needs checking before anything is written."}{" "}
+              MarCo only drafts content when the diagnosis shows it&apos;s needed.
+            </p>
+          )}
+        </Field>
       </div>
     </div>
   );

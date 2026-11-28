@@ -71,7 +71,16 @@ describe("mock snapshot, end to end", () => {
     const { results } = await runMockSnapshot();
     const byId = Object.fromEntries(results.scorecard.map((m) => [m.id, m]));
     expect(byId["unaided-mention"]).toMatchObject({ count: 2, total: 5 });
-    expect(byId["competitor-inclusion"]).toMatchObject({ count: 5, total: 5 });
+    // Per competitor, with the brand on the same list.
+    expect(results.competitors.map((c) => `${c.name} ${c.count}/${c.total}`)).toEqual([
+      "Asana 5/5",
+      "ClickUp 5/5",
+      "Monday.com 3/5",
+      "FlowOps 2/5",
+    ]);
+    // Citation rate = answers citing the company's OWN website; "any source" shown separately.
+    expect(byId["citations-discovery"]).toMatchObject({ count: 0, total: 5, secondary: "Any source listed: 4 of 5" });
+    expect(byId["citations-fact"]).toMatchObject({ count: 2, total: 5, secondary: "Any source listed: 5 of 5" });
     expect(byId["verified-accuracy"]).toMatchObject({ total: 0 }); // N/A until facts are confirmed
     expect(results.scorecard.some((m) => /overall|total score|visibility score/i.test(m.label))).toBe(false);
     expect(results.topFindings).toHaveLength(3);

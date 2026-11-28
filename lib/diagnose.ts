@@ -16,6 +16,8 @@ import { NotConnectedError } from "@/lib/extract";
 import { type ModeInfo } from "@/lib/mode";
 import { MOCK_FIXTURE } from "@/lib/mock";
 import { getPrompt } from "@/lib/prompts";
+import { businessImpact, buyerRelevance, evidenceStrength, priorityScore } from "@/lib/priority";
+export { businessImpact, buyerRelevance, evidenceStrength, priorityScore };
 import type {
   Action,
   ActionOutcome,
@@ -24,7 +26,6 @@ import type {
   Claim,
   ContentCheckResult,
   Draft,
-  EvidenceStrength,
   ExtractedPage,
   Fact,
   FactType,
@@ -79,47 +80,6 @@ function normalizeText(s: string): string {
   return s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 }
 
-export function evidenceStrength(occurrences: number): EvidenceStrength {
-  if (occurrences >= 3) return "high";
-  if (occurrences === 2) return "medium";
-  return "low";
-}
-
-const FOCUS_RELEVANCE: Record<FocusArea, 1 | 2 | 3> = {
-  pricing_plans: 3,
-  comparisons_alternatives: 3,
-  product_features: 2,
-  use_cases_customers: 2,
-  integrations: 2,
-  company_credibility: 1,
-};
-
-/** Buyer relevance 1-3: discovery questions and pricing/comparisons matter most to buyers. */
-export function buyerRelevance(kind: Group["kind"], focusArea: FocusArea): 1 | 2 | 3 {
-  if (kind === "visibility_gap") return 3;
-  return FOCUS_RELEVANCE[focusArea];
-}
-
-/** Business impact 1-3: a wrong fact hurts most; an unverifiable claim least. */
-export function businessImpact(kind: Group["kind"], focusArea: FocusArea): 1 | 2 | 3 {
-  switch (kind) {
-    case "inaccurate":
-      return 3;
-    case "visibility_gap":
-      return focusArea === "pricing_plans" || focusArea === "comparisons_alternatives" ? 3 : 2;
-    case "coverage_gap":
-      return 2;
-    case "unverifiable":
-      return 1;
-  }
-}
-
-const STRENGTH_WEIGHT: Record<EvidenceStrength, number> = { high: 3, medium: 2, low: 1 };
-
-export function priorityScore(i: Pick<Issue, "relevance" | "impact" | "evidenceStrength">): number {
-  return i.relevance * i.impact * STRENGTH_WEIGHT[i.evidenceStrength];
-}
-
 // ---------------------------------------------------------------------------
 // Destinations and drafts
 // ---------------------------------------------------------------------------
@@ -162,6 +122,15 @@ function thirdPartySources(occurrences: Occurrence[], brand: Brand, facts: Fact[
 function buildDraftText(brand: Brand, facts: Fact[]): string {
   return facts.map((f) => factSentence(brand.name, f)).join(" ");
 }
+
+const FOCUS_RELEVANCE_FOR_ACCURATE: Record<FocusArea, 1 | 2 | 3> = {
+  pricing_plans: 3,
+  comparisons_alternatives: 3,
+  product_features: 2,
+  use_cases_customers: 2,
+  integrations: 2,
+  company_credibility: 1,
+};
 
 // ---------------------------------------------------------------------------
 // Main
@@ -264,6 +233,7 @@ export async function diagnose({ auditId, brand, facts: allFacts, runs, claims, 
     let reason: string;
     let contentCheck: ContentCheck = { result: "not_applicable", note: "This issue isn't about one of your facts." };
     let draftFacts: Fact[] = [];
+    let draftDestination: string | undefined;
 
     if ((g.kind === "inaccurate" || g.kind === "coverage_gap") && g.fact) {
       const fact = g.fact;
@@ -292,7 +262,15 @@ export async function diagnose({ auditId, brand, facts: allFacts, runs, claims, 
         } else {
           outcome = "correction";
           draftFacts = [fact];
-          recommendedAction = `State it plainly on your ${destination.charAt(0).toLowerCase() + destination.slice(1)}: “${factSentence(brand.name, fact)}”`;
+          draftDestination = destination;
+          const page = destination.charAt(0).toLowerCase() + destination.slice(1);
+          if (g.kind === "inaccurate" && sources.length) {
+            // The wrong figure came from someone else's page: fix it there AND make your own page unmistakable.
+            destination = `Request a correction from the listing owner (${sources.join(", ")}), and make it explicit on your ${page}`;
+            recommendedAction = `Ask ${sources.join(", ")} to correct their listing, and state it plainly on your ${page}: “${factSentence(brand.name, fact)}”`;
+          } else {
+            recommendedAction = `State it plainly on your ${page}: “${factSentence(brand.name, fact)}”`;
+          }
           reason = `${g.kind === "inaccurate" ? "AI answers contradicted this" : "AI answers left this out"} in ${times}. On your website: ${contentCheck.note.charAt(0).toLowerCase() + contentCheck.note.slice(1)} A clear, specific statement gives AI assistants something accurate to repeat.`;
         }
       }
@@ -310,6 +288,7 @@ export async function diagnose({ auditId, brand, facts: allFacts, runs, claims, 
       } else {
         outcome = "correction";
         draftFacts = relevant;
+        draftDestination = "A page that answers this buyer question";
         recommendedAction = `Publish clear, factual content that answers “${first.run.promptText}”, using your confirmed facts. Listings on review and comparison sites also shape these answers.`;
         reason = `You were left out of ${times}. AI assistants can only include you if they find clear, specific information about you.`;
       }
@@ -339,6 +318,7 @@ export async function diagnose({ auditId, brand, facts: allFacts, runs, claims, 
       recommendedAction,
       reason,
       status: "Draft",
+      ...(draftDestination ? { draftDestination } : {}),
     });
 
     if (outcome === "correction") {
@@ -354,6 +334,43 @@ export async function diagnose({ auditId, brand, facts: allFacts, runs, claims, 
         publishedAt: null,
       });
     }
+  }
+
+  // Questions where every answer was accurate and complete: "No correction recommended".
+  const issuesWithFindings = new Set(ordered.map((o) => o.g.promptId));
+  for (const promptId of [...new Set(runs.map((r) => r.promptId))]) {
+    if (issuesWithFindings.has(promptId)) continue;
+    const promptRuns = runs.filter((r) => r.promptId === promptId && r.status === "completed");
+    const runIds = new Set(promptRuns.map((r) => r.id));
+    const accurate = claims.filter((c) => runIds.has(c.auditRunId) && c.label === "accurate");
+    const runsWithAccurate = new Set(accurate.map((c) => c.auditRunId));
+    if (promptRuns.length === 0 || runsWithAccurate.size !== promptRuns.length) continue;
+    const prompt = getPrompt(promptId);
+    const issueId = `${auditId}-i${issues.length + 1}`;
+    issues.push({
+      id: issueId,
+      auditId,
+      kind: "accurate",
+      observedIssue: `AI answers to “${promptRuns[0].promptText}” matched your confirmed facts`,
+      claimIds: accurate.map((c) => c.id),
+      gapIds: [],
+      evidenceExcerpt: accurate[0].answerExcerpt,
+      relevance: FOCUS_RELEVANCE_FOR_ACCURATE[prompt.focusArea],
+      impact: 1,
+      evidenceStrength: evidenceStrength(promptRuns.length),
+      rejectedByUser: false,
+    });
+    actions.push({
+      id: `${issueId}-a`,
+      issueId,
+      contentCheckResult: "not_applicable",
+      contentCheckNote: "Nothing to check: the answers were accurate.",
+      destination: "None",
+      outcome: "no_correction",
+      recommendedAction: "No correction recommended. Keep this page as it is.",
+      reason: `All ${promptRuns.length} answers to this question were accurate and mentioned nothing that contradicts your facts. Changing content that already works could make it worse.`,
+      status: "Draft",
+    });
   }
 
   return { issues, actions, drafts };

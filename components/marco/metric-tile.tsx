@@ -18,11 +18,13 @@ type Props = {
   howCalculated: string;
   /** Shown instead of the explanation when the metric is N/A. */
   notApplicableReason?: string;
+  /** Small secondary line, e.g. "Any source listed: 4 of 5". */
+  secondary?: string;
   className?: string;
 };
 
 /** Counts are always shown with rates. Never combined into a single score. */
-export function MetricTile({ label, count, total, explanation, howCalculated, notApplicableReason, className }: Props) {
+export function MetricTile({ label, count, total, explanation, howCalculated, notApplicableReason, secondary, className }: Props) {
   // A popover rather than a hover-only tooltip, so it also works on phones.
   const [open, setOpen] = useState(false);
   const notApplicable = total === 0;
@@ -67,6 +69,7 @@ export function MetricTile({ label, count, total, explanation, howCalculated, no
       )}
 
       <p className="text-sm text-slate-600">{notApplicable ? (notApplicableReason ?? "Nothing to measure yet.") : explanation}</p>
+      {secondary && <p className="font-mono text-xs text-slate-500">{secondary}</p>}
     </div>
   );
 }

@@ -173,19 +173,62 @@ async function askAI(
   const fixture = mockAnswerFor(prompt.id, ctx.runNumber, ctx.isReaudit);
   if (!fixture) throw new Error(`No mock answer for question ${prompt.id}.`);
   void promptText;
-  return { answer: fixture.answer, citations: fixture.citations, modelId: "mock-fixture" };
+  return {
+    answer: fixture.answer,
+    citations: fixture.citations,
+    modelId: ctx.isReaudit ? MOCK_FIXTURE.reauditModelId : "mock-fixture",
+  };
 }
 
-async function analyzeAnswer(run: AuditRun, prompt: Prompt, mode: ModeInfo, brandId: string, isReaudit: boolean): Promise<AnswerAnalysis> {
-  if (mode.mode !== "MOCK") throw new NotConnectedError("Answer classification (Gemini)");
-  const fixture = mockAnswerFor(prompt.id, run.runNumber, isReaudit);
-  if (!fixture) throw new Error(`No mock analysis for question ${prompt.id}.`);
-  // Fixture fact keys -> this brand's stored fact ids.
+/** The mock fixture's analysis for one run, with fixture fact keys mapped to this brand's fact ids. */
+function mockAnalysis(promptId: string, runNumber: number, brandId: string, isReaudit: boolean): AnswerAnalysis | null {
+  const fixture = mockAnswerFor(promptId, runNumber, isReaudit);
+  if (!fixture) return null;
   const id = (key: string) => `${brandId}-${key}`;
   return AnswerAnalysis.parse({
     claims: fixture.analysis.claims.map((c) => ({ ...c, factId: c.factId ? id(c.factId) : null })),
     relevantFactIds: fixture.analysis.relevantFactIds.map(id),
   });
+}
+
+async function analyzeAnswer(run: AuditRun, prompt: Prompt, mode: ModeInfo, brandId: string, isReaudit: boolean): Promise<AnswerAnalysis> {
+  if (mode.mode !== "MOCK") throw new NotConnectedError("Answer classification (Gemini)");
+  const analysis = mockAnalysis(prompt.id, run.runNumber, brandId, isReaudit);
+  if (!analysis) throw new Error(`No mock analysis for question ${prompt.id}.`);
+  return analysis;
+}
+
+/**
+ * After the customer reviews their facts, re-apply the labelling rules to the
+ * brand's snapshot answers: a confirmed contradiction becomes "Inaccurate"
+ * (no longer "potential"), and a claim about a rejected fact becomes
+ * "Unverifiable". Uses the analysis saved with each answer; no new AI calls.
+ * Deep audits are not relabelled (that would regenerate their drafts); they
+ * get a "fact changed" flag instead.
+ */
+export function reclassifySnapshots(data: StoreData, brandId: string): number {
+  const brand = data.brands.find((b) => b.id === brandId);
+  if (!brand) return 0;
+  const facts = data.facts.filter((f) => f.brandId === brandId);
+  const snapshotIds = new Set(data.audits.filter((a) => a.brandId === brandId && a.type === "snapshot").map((a) => a.id));
+  let updated = 0;
+  for (const run of data.auditRuns.filter((r) => snapshotIds.has(r.auditId) && r.status === "completed")) {
+    const analysis = run.analysis ?? (run.mode === "MOCK" ? mockAnalysis(run.promptId, run.runNumber, brandId, false) : null);
+    if (!analysis) continue;
+    const { claims, gaps } = classifyAnswer({
+      run,
+      prompt: getPrompt(run.promptId),
+      brandName: brand.name,
+      facts,
+      analysis,
+      factsReviewed: Boolean(brand.factsReviewedAt),
+    });
+    data.claims = data.claims.filter((c) => c.auditRunId !== run.id).concat(claims);
+    data.gaps = data.gaps.filter((g) => g.auditRunId !== run.id).concat(gaps);
+    run.analysis = analysis;
+    updated += 1;
+  }
+  return updated;
 }
 
 // ---------------------------------------------------------------------------
@@ -298,6 +341,9 @@ async function runStep(auditId: string, requestedMode: ModeInfo): Promise<Snapsh
         return (data, p) => {
           data.claims = data.claims.filter((c) => c.auditRunId !== run.id).concat(claims);
           data.gaps = data.gaps.filter((g) => g.auditRunId !== run.id).concat(gaps);
+          // Keep the analysis so labels can be re-applied if the customer's facts change.
+          const stored = data.auditRuns.find((r) => r.id === run.id);
+          if (stored) stored.analysis = analysis;
           p.index += 1;
           if (p.index >= snapshot.runs.length) {
             p.index = 0;

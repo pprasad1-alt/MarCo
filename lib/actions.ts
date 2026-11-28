@@ -113,11 +113,13 @@ export function applyActionOp(actionId: string, input: ActionOp): Promise<Action
 }
 
 /** The customer says an issue isn't a real problem (or undoes that). */
-export function setIssueDismissed(issueId: string, dismissed: boolean): Promise<boolean> {
+export function setIssueDismissed(issueId: string, dismissed: boolean, reason?: string): Promise<boolean> {
   return updateStore({ issueId }, (data) => {
     const issue = data.issues.find((i) => i.id === issueId);
     if (!issue) return false;
     issue.rejectedByUser = dismissed;
+    if (dismissed && reason) issue.rejectionReason = reason.slice(0, 500);
+    else delete issue.rejectionReason;
     return true;
   });
 }

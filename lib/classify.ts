@@ -16,25 +16,11 @@
  *  - Citations play no part in the label: no citations = "citation evidence
  *    unavailable", never "inaccurate".
  */
-import { z } from "zod";
 import { mentionsBrand } from "@/lib/prompts";
-import type { AuditRun, Claim, Fact, Gap, Prompt } from "@/lib/types";
+import { AnswerAnalysis, type AuditRun, type Claim, type Fact, type Gap, type Prompt } from "@/lib/types";
 
-export const AnswerAnalysis = z.object({
-  claims: z.array(
-    z.object({
-      /** The AI's exact words (must appear in the answer). */
-      excerpt: z.string().min(1),
-      /** The fact this claim is about, if any. */
-      factId: z.string().nullable(),
-      /** supports = matches the fact; contradicts = conflicts with it; none = no fact to check against. */
-      relation: z.enum(["supports", "contradicts", "none"]),
-    }),
-  ),
-  /** Facts a good answer to THIS question would mention (for coverage gaps). */
-  relevantFactIds: z.array(z.string()),
-});
-export type AnswerAnalysis = z.infer<typeof AnswerAnalysis>;
+// Defined in lib/types.ts (it is stored on each audit run); re-exported here.
+export { AnswerAnalysis };
 
 export type ClassifyInput = {
   run: Pick<AuditRun, "id" | "answer">;
