@@ -165,6 +165,27 @@ export const Audit = z.object({
 });
 export type Audit = z.infer<typeof Audit>;
 
+/**
+ * What the AI (or mock data) read in one answer: which sentences are claims and
+ * which fact each relates to. Evidence only; lib/classify.ts decides the labels.
+ * Stored on each run so labels can be re-applied when facts change.
+ */
+export const AnswerAnalysis = z.object({
+  claims: z.array(
+    z.object({
+      /** The AI's exact words (must appear in the answer). */
+      excerpt: z.string().min(1),
+      /** The fact this claim is about, if any. */
+      factId: z.string().nullable(),
+      /** supports = matches the fact; contradicts = conflicts with it; none = no fact to check against. */
+      relation: z.enum(["supports", "contradicts", "none"]),
+    }),
+  ),
+  /** Facts a good answer to THIS question would mention (for coverage gaps). */
+  relevantFactIds: z.array(z.string()),
+});
+export type AnswerAnalysis = z.infer<typeof AnswerAnalysis>;
+
 /** A citation exactly as the API returned it (not yet verified). */
 export const RawCitation = z.object({
   url: z.string(),
@@ -196,6 +217,8 @@ export const AuditRun = z.object({
   status: AuditRunStatus,
   /** Plain-language error if status is "failed". Never replaced by invented results. */
   error: z.string().nullable().optional(),
+  /** The analysis used to classify this answer, kept so labels can be re-applied when facts change. */
+  analysis: AnswerAnalysis.optional(),
 });
 export type AuditRun = z.infer<typeof AuditRun>;
 
@@ -250,6 +273,8 @@ export const Issue = z.object({
   impact: Score1to3,
   evidenceStrength: EvidenceStrength,
   rejectedByUser: z.boolean(),
+  /** Why the customer said "This isn't right" (optional). */
+  rejectionReason: z.string().max(500).optional(),
 });
 export type Issue = z.infer<typeof Issue>;
 
@@ -271,6 +296,8 @@ export const Action = z.object({
   outcome: ActionOutcome,
   /** What the content check found, in plain words (e.g. which page states the fact). */
   contentCheckNote: z.string().optional(),
+  /** Where the drafted text goes on the customer's own site (corrections only), e.g. "Pricing page". */
+  draftDestination: z.string().optional(),
   /** The recommendation in plain words (or the no-action explanation). */
   recommendedAction: z.string().min(1),
   reason: z.string().min(1),

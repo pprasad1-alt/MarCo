@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowRight, TriangleAlert } from "lucide-react";
+import { ArrowRight, RotateCw, TriangleAlert } from "lucide-react";
 import { AnswersList } from "@/components/marco/answers-list";
 import { ComparisonView } from "@/components/marco/comparison-view";
 import { DismissButton } from "@/components/marco/dismiss-button";
@@ -10,30 +10,28 @@ import { JourneySteps } from "@/components/marco/journey-steps";
 import { SampleNote } from "@/components/marco/sample-note";
 import { Scorecard } from "@/components/marco/scorecard";
 import { OutcomeBadge } from "@/components/marco/outcome-badge";
-import { ReauditButton } from "@/components/marco/reaudit-button";
+import { EvidenceQuote } from "@/components/marco/evidence-quote";
 import { StatusPill } from "@/components/marco/status-pill";
 import { Button } from "@/components/ui/button";
 import { STRENGTH_LABELS } from "@/lib/findings";
 import { compareAudits } from "@/lib/compare";
 import { buildSnapshotResults, staleIssueIds } from "@/lib/results";
 import { bundleFrom, readStore } from "@/lib/store";
-import { FOCUS_AREA_LABELS, type Action, type Issue } from "@/lib/types";
+import { LocalDate } from "@/components/marco/local-date";
+import { FOCUS_AREA_LABELS, type Action, type Issue, type RawCitation } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Deep audit report · MarCo" };
 
-function IssueCard({
-  issue,
-  action,
-  primary,
-  stale,
-  rank,
-}: {
+type IssueView = {
   issue: Issue;
   action: Action;
-  primary: boolean;
-  stale: boolean;
-  rank: number;
-}) {
+  question: string;
+  seenIn: string;
+  sources: RawCitation[];
+};
+
+function IssueCard({ view, primary, stale, rank }: { view: IssueView; primary: boolean; stale: boolean; rank: number }) {
+  const { issue, action } = view;
   return (
     <article className="space-y-3 rounded-xl border bg-card p-5 transition-shadow hover:shadow-sm sm:p-6">
       <div className="flex items-center justify-between gap-2">
@@ -46,17 +44,23 @@ function IssueCard({
         {action.outcome === "correction" && <StatusPill status={action.status} />}
       </div>
       <h3 className="font-semibold text-slate-900">{issue.observedIssue}</h3>
+      <p className="text-sm text-slate-500">
+        {/* Visibility gaps already quote the question in their title. */}
+        {!issue.observedIssue.includes(view.question) && <>Question: “{view.question}” · </>}
+        <span className="font-medium text-slate-700">{view.seenIn}</span>
+      </p>
       {stale && (
         <p className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-sm text-amber-950">
           <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           The fact behind this finding changed after this audit. Run a re-audit to check it again.
         </p>
       )}
+      <EvidenceQuote quote={issue.evidenceExcerpt} sources={view.sources} />
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <OutcomeBadge outcome={action.outcome} />
         <span className="text-slate-500">
-          Relevance <span className="font-mono text-slate-800">{issue.relevance}/3</span> · Impact{" "}
-          <span className="font-mono text-slate-800">{issue.impact}/3</span> · Evidence{" "}
+          Priority: buyer relevance <span className="font-mono text-slate-800">{issue.relevance}/3</span>, business
+          impact <span className="font-mono text-slate-800">{issue.impact}/3</span>, evidence:{" "}
           <span className="text-slate-800">{STRENGTH_LABELS[issue.evidenceStrength].toLowerCase()}</span>
         </span>
       </div>
@@ -92,14 +96,33 @@ export default async function DeepReportPage(props: PageProps<"/audit/[id]/repor
     .filter((a) => data.progress.find((p) => p.auditId === a.id)?.status === "done");
   const snapshotId = data.audits.find((a) => a.brandId === brand.id && a.type === "snapshot")?.id;
   const stale = staleIssueIds(bundle);
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-US", { dateStyle: "medium" });
   const isMock = runs.some((r) => r.mode === "MOCK");
-  const date = new Date(audit.createdAt).toLocaleDateString("en-US", { dateStyle: "medium" });
-  const withAction = issues.flatMap((issue) => {
+  // Evidence for each issue: its question, how often it showed up, and the sources of the first answer.
+  const withAction: IssueView[] = issues.flatMap((issue) => {
     const action = actions.find((a) => a.issueId === issue.id);
-    return action ? [{ issue, action }] : [];
+    if (!action) return [];
+    const firstRunId =
+      bundle.claims.find((c) => issue.claimIds.includes(c.id))?.auditRunId ??
+      bundle.gaps.find((g) => issue.gapIds.includes(g.id))?.auditRunId;
+    const firstRun = runs.find((r) => r.id === firstRunId);
+    const count = new Set([
+      ...bundle.claims.filter((c) => issue.claimIds.includes(c.id)).map((c) => c.auditRunId),
+      ...bundle.gaps.filter((g) => issue.gapIds.includes(g.id)).map((g) => g.auditRunId),
+    ]).size;
+    const perQuestion = issue.kind === "visibility_gap" || issue.kind === "unverifiable" || issue.kind === "accurate";
+    const pool = perQuestion && firstRun ? runs.filter((r) => r.promptId === firstRun.promptId).length : runs.length;
+    return [
+      {
+        issue,
+        action,
+        question: firstRun?.promptText ?? "",
+        seenIn: perQuestion ? `Seen in ${count} of ${pool} runs` : `Seen in ${count} of ${pool} answers`,
+        sources: firstRun?.rawCitations ?? [],
+      },
+    ];
   });
-  const open = withAction.filter((x) => !x.issue.rejectedByUser);
+  const open = withAction.filter((x) => !x.issue.rejectedByUser && x.issue.kind !== "accurate");
+  const allClear = withAction.filter((x) => !x.issue.rejectedByUser && x.issue.kind === "accurate");
   const dismissed = withAction.filter((x) => x.issue.rejectedByUser);
   const corrections = open.filter((x) => x.action.outcome === "correction").length;
   const primaryId = (open.find((x) => x.action.outcome === "correction") ?? open[0])?.issue.id;
@@ -113,7 +136,7 @@ export default async function DeepReportPage(props: PageProps<"/audit/[id]/repor
         </p>
         <h1 className="text-3xl font-semibold tracking-tight">What to fix: {area.toLowerCase()}</h1>
         <p className="text-sm text-slate-500">
-          {brand.name} · {runs.length} AI answers (5 questions, 3 runs each) · {date}
+          {brand.name} · {runs.length} AI answers (5 questions, 3 runs each) · <LocalDate iso={audit.createdAt} />
         </p>
         {isMock && (
           <SampleNote>Sample results for {brand.name}, a fictional company. No real audit was run.</SampleNote>
@@ -125,7 +148,7 @@ export default async function DeepReportPage(props: PageProps<"/audit/[id]/repor
       </header>
 
       {comparison && baseline && (
-        <ComparisonView comparison={comparison} baselineDate={fmtDate(baseline.audit.createdAt)} />
+        <ComparisonView comparison={comparison} baselineDate={baseline.audit.createdAt} />
       )}
 
       {reaudits.length > 0 && (
@@ -145,7 +168,7 @@ export default async function DeepReportPage(props: PageProps<"/audit/[id]/repor
               <li key={a.id}>
                 <a href={`/audit/${a.id}/report`} className="text-indigo-600 hover:underline">
                   Re-audit from{" "}
-                  {new Date(a.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                  <LocalDate iso={a.createdAt} withTime />
                 </a>
               </li>
             ))}
@@ -164,13 +187,12 @@ export default async function DeepReportPage(props: PageProps<"/audit/[id]/repor
         </div>
         {open.length > 0 ? (
           <div className="grid gap-4">
-            {open.map(({ issue, action }, n) => (
+            {open.map((view, n) => (
               <IssueCard
-                key={issue.id}
-                issue={issue}
-                action={action}
-                primary={issue.id === primaryId}
-                stale={stale.has(issue.id)}
+                key={view.issue.id}
+                view={view}
+                primary={view.issue.id === primaryId}
+                stale={stale.has(view.issue.id)}
                 rank={n + 1}
               />
             ))}
@@ -181,15 +203,41 @@ export default async function DeepReportPage(props: PageProps<"/audit/[id]/repor
             relevant.
           </p>
         )}
+        {allClear.length > 0 && (
+          <div className="space-y-2 rounded-xl border p-5 sm:p-6">
+            <h3 className="font-semibold text-slate-900">Questions with nothing to fix</h3>
+            <ul className="space-y-3">
+              {allClear.map(({ issue, action, seenIn }) => (
+                <li key={issue.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="space-y-1 text-sm text-slate-700">
+                    <FindingBadge kind="accurate" className="mr-2" />
+                    {issue.observedIssue} <span className="text-slate-500">({seenIn.replace("Seen in", "accurate in")})</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-3">
+                    <OutcomeBadge outcome={action.outcome} />
+                    <Link href={`/action/${action.id}`} className="text-sm text-indigo-600 hover:underline">
+                      Details
+                    </Link>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {dismissed.length > 0 && (
           <details className="rounded-xl border p-4">
             <summary className="cursor-pointer text-sm font-medium text-slate-700">
-              Marked as not an issue ({dismissed.length})
+              You said these aren&apos;t right ({dismissed.length})
             </summary>
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-3 space-y-3">
               {dismissed.map(({ issue }) => (
-                <li key={issue.id} className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
-                  <span>{issue.observedIssue}</span>
+                <li key={issue.id} className="flex flex-wrap items-start justify-between gap-2 text-sm text-slate-600">
+                  <span>
+                    {issue.observedIssue}
+                    {issue.rejectionReason && (
+                      <span className="block text-slate-500">Your reason: “{issue.rejectionReason}”</span>
+                    )}
+                  </span>
                   <DismissButton issueId={issue.id} dismissed />
                 </li>
               ))}
@@ -211,7 +259,11 @@ export default async function DeepReportPage(props: PageProps<"/audit/[id]/repor
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <ReauditButton auditId={audit.id} label={isReaudit ? "Run another re-audit" : "Run a re-audit"} />
+          <Button asChild variant="outline">
+            <Link href={`/audit/${baselineId ?? audit.id}/reaudit`}>
+              <RotateCw aria-hidden="true" /> {isReaudit ? "Run another re-audit" : "Re-audit"}
+            </Link>
+          </Button>
           {snapshotId && (
             <a
               href={`/snapshot/${snapshotId}/facts?return=${audit.id}`}
@@ -232,7 +284,7 @@ export default async function DeepReportPage(props: PageProps<"/audit/[id]/repor
             Separate measures, each shown as a count and a rate. There is no single overall score.
           </p>
         </div>
-        <Scorecard metrics={results.scorecard} />
+        <Scorecard metrics={results.scorecard} competitors={results.competitors} />
       </section>
 
       <AnswersList answers={results.answers} brandName={brand.name} deep />

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { applyFactReview, FactReview } from "@/lib/facts";
 import { reopenDraftsForChangedFacts } from "@/lib/actions";
+import { reclassifySnapshots } from "@/lib/audit";
 import { updateStore } from "@/lib/store";
 
 /** Saves the customer's fact review: confirm, edit or reject each fact. */
@@ -29,6 +30,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/brands/[id]
     data.facts = data.facts.filter((f) => f.brandId !== id).concat(applied.facts);
     brand.factsReviewedAt = at;
     const reopened = reopenDraftsForChangedFacts(data, id, changed);
+    // Snapshot findings are re-labelled against the facts as they are now.
+    reclassifySnapshots(data, id);
     return { ok: true as const, reopened: reopened.length };
   });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });

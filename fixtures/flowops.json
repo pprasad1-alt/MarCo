@@ -1,5 +1,5 @@
 {
-  "_note": "MOCK DATA. FlowOps is a fictional company. Every answer below is invented sample text for demos and tests, never shown as a real audit (the mock banner is always visible). Deep-audit sample data covers two focus areas: Pricing and plans, and Use cases and customers. Where a question lists several answers, runs 1-3 use them in turn. reauditAnswers: answers used by re-audits in mock mode (questions not listed reuse the normal answers, so they show no change).",
+  "_note": "MOCK DATA. FlowOps is a fictional company. Every answer below is invented sample text for demos and tests, never shown as a real audit (the mock banner is always visible). Deep-audit sample data covers two focus areas: Pricing and plans, and Use cases and customers. Where a question lists several answers, runs 1-3 use them in turn. reauditAnswers: answers used by re-audits in mock mode (questions not listed reuse the normal answers, so they show no change). Re-audits in mock mode record model 'mock-fixture-2' to demonstrate the comparability warning.",
   "brand": {
     "name": "FlowOps",
     "url": "https://flowops.example.com/",
@@ -24,7 +24,7 @@
     {
       "url": "https://flowops.example.com/pricing",
       "title": "Pricing",
-      "content": "Free plan for up to 5 users. Team plan: $8 per user per month, billed annually. Business plan with SSO: $15 per user per month."
+      "content": "Simple pricing for growing teams. Team plan: $8 per user per month, billed annually. Business plan with SSO: $15 per user per month. Plan comparison table: Free | up to 5 users | sprint boards."
     },
     {
       "url": "https://flowops.example.com/integrations",
@@ -480,19 +480,14 @@
         }
       },
       {
-        "answer": "Most tools charge per user. Asana's Starter plan is about $11 per user per month, ClickUp's Unlimited plan about $7, Monday.com about $9 with a 3-seat minimum, and FlowOps about $8 per user per month on its Team plan.",
-        "citations": [
-          {
-            "url": "https://reviews.example.org/pm-pricing-compared",
-            "title": "Project management pricing compared"
-          }
-        ],
+        "answer": "Asana, ClickUp and Monday.com all charge per user, from about $7 to $11 per month. FlowOps starts at about $12 per user per month.",
+        "citations": [],
         "analysis": {
           "claims": [
             {
-              "excerpt": "FlowOps about $8 per user per month on its Team plan",
+              "excerpt": "FlowOps starts at about $12 per user per month.",
               "factId": "f-pricing-team",
-              "relation": "supports"
+              "relation": "contradicts"
             }
           ],
           "relevantFactIds": []
@@ -500,7 +495,7 @@
       }
     ],
     "pp-fact-paid-plan": {
-      "answer": "FlowOps's Team plan costs $8 per user per month, billed annually, and adds unlimited projects, timelines and integrations. A Business plan adds SSO.",
+      "answer": "FlowOps's Team plan costs $8 per user per month, billed annually.",
       "citations": [
         {
           "url": "https://flowops.example.com/pricing",
@@ -510,19 +505,9 @@
       "analysis": {
         "claims": [
           {
-            "excerpt": "FlowOps's Team plan costs $8 per user per month, billed annually",
+            "excerpt": "FlowOps's Team plan costs $8 per user per month, billed annually.",
             "factId": "f-pricing-team",
             "relation": "supports"
-          },
-          {
-            "excerpt": "adds unlimited projects, timelines and integrations",
-            "factId": null,
-            "relation": "none"
-          },
-          {
-            "excerpt": "A Business plan adds SSO.",
-            "factId": null,
-            "relation": "none"
           }
         ],
         "relevantFactIds": [
@@ -674,8 +659,8 @@
   },
   "contentChecks": {
     "f-pricing-free": {
-      "result": "stated_clearly",
-      "note": "Your pricing page lists “Free plan for up to 5 users” in the plan table."
+      "result": "stated_unclearly",
+      "note": "Your pricing page states 5 users only in the plan comparison table, not in the plan description."
     },
     "f-pricing-team": {
       "result": "stated_clearly",
@@ -833,6 +818,133 @@
           ]
         }
       }
+    ],
+    "pp-fact-cost": [
+      {
+        "answer": "FlowOps is free for up to 5 users. Paid plans start at $8 per user per month on annual billing.",
+        "citations": [
+          {
+            "url": "https://flowops.example.com/pricing",
+            "title": "FlowOps pricing"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is free for up to 5 users.",
+              "factId": "f-pricing-free",
+              "relation": "supports"
+            },
+            {
+              "excerpt": "Paid plans start at $8 per user per month on annual billing.",
+              "factId": "f-pricing-team",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": [
+            "f-pricing-free",
+            "f-pricing-team"
+          ]
+        }
+      },
+      {
+        "answer": "FlowOps is free for up to 5 users. Paid plans start at $8 per user per month on annual billing.",
+        "citations": [
+          {
+            "url": "https://flowops.example.com/pricing",
+            "title": "FlowOps pricing"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is free for up to 5 users.",
+              "factId": "f-pricing-free",
+              "relation": "supports"
+            },
+            {
+              "excerpt": "Paid plans start at $8 per user per month on annual billing.",
+              "factId": "f-pricing-team",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": [
+            "f-pricing-free",
+            "f-pricing-team"
+          ]
+        }
+      },
+      {
+        "answer": "FlowOps is free for up to 5 users. Paid plans start at $8 per user per month on annual billing.",
+        "citations": [
+          {
+            "url": "https://flowops.example.com/pricing",
+            "title": "FlowOps pricing"
+          }
+        ],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps is free for up to 5 users.",
+              "factId": "f-pricing-free",
+              "relation": "supports"
+            },
+            {
+              "excerpt": "Paid plans start at $8 per user per month on annual billing.",
+              "factId": "f-pricing-team",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": [
+            "f-pricing-free",
+            "f-pricing-team"
+          ]
+        }
+      }
+    ],
+    "pp-discovery-free-plans": [
+      {
+        "answer": "ClickUp, Asana and Trello all have free plans that work well for small teams. FlowOps also offers a free plan aimed at startups. Free tiers usually limit storage, integrations or the number of users.",
+        "citations": [],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps also offers a free plan aimed at startups.",
+              "factId": "f-pricing-free",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": []
+        }
+      },
+      {
+        "answer": "ClickUp, Asana and Trello all have free plans that work well for small teams. FlowOps also offers a free plan aimed at startups. Free tiers usually limit storage, integrations or the number of users.",
+        "citations": [],
+        "analysis": {
+          "claims": [
+            {
+              "excerpt": "FlowOps also offers a free plan aimed at startups.",
+              "factId": "f-pricing-free",
+              "relation": "supports"
+            }
+          ],
+          "relevantFactIds": []
+        }
+      },
+      {
+        "answer": "Trello, ClickUp and Asana offer the most generous free plans for small teams. Notion also works well for very small teams.",
+        "citations": [
+          {
+            "url": "https://reviews.example.org/free-pm-tools",
+            "title": "Best free project management tools"
+          }
+        ],
+        "analysis": {
+          "claims": [],
+          "relevantFactIds": []
+        }
+      }
     ]
-  }
+  },
+  "reauditModelId": "mock-fixture-2"
 }

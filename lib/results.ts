@@ -3,10 +3,11 @@
  * scorecard, ranked findings, and every answer with its findings.
  */
 import { findingKindForClaim, findingKindForGap } from "@/lib/findings";
+import { businessImpact, buyerRelevance, evidenceStrength } from "@/lib/priority";
 import { getPrompt, mentionsBrand } from "@/lib/prompts";
-import { computeScorecard, type Metric } from "@/lib/scorecard";
+import { competitorMentions, computeScorecard, type CompetitorMention, type Metric } from "@/lib/scorecard";
 import type { SnapshotBundle } from "@/lib/store";
-import type { AuditRun, Fact, FindingKind, FocusArea, Prompt, RawCitation } from "@/lib/types";
+import type { AuditRun, EvidenceStrength, Fact, FindingKind, FocusArea, Prompt, RawCitation } from "@/lib/types";
 
 export type Finding = {
   id: string;
@@ -19,6 +20,10 @@ export type Finding = {
   focusArea: FocusArea;
   citations: RawCitation[];
   whyItMatters: string;
+  /** Priority, using the same rules as the deep audit. Not set for accurate claims. */
+  priority?: { relevance: 1 | 2 | 3; impact: 1 | 2 | 3; strength: EvidenceStrength; occurrences: number };
+  /** The fact this finding is about (used to count how often it appears). */
+  factId?: string | null;
   /** What the website says, when the finding relates to a fact. */
   fact: Pick<Fact, "value" | "sourceUrl"> | null;
 };
@@ -27,6 +32,8 @@ export type AnswerView = { run: AuditRun; prompt: Prompt; findings: Finding[] };
 
 export type SnapshotResults = {
   scorecard: Metric[];
+  /** Each competitor and the brand, with how many discovery answers named them. */
+  competitors: CompetitorMention[];
   topFindings: Finding[];
   answers: AnswerView[];
   counts: Record<FindingKind, number>;
@@ -111,6 +118,7 @@ export function buildSnapshotResults(bundle: SnapshotBundle): SnapshotResults {
           quote: c.answerExcerpt,
           whyItMatters: whyItMatters(kind, prompt.focusArea, { competitorsNamed, fact }),
           fact: fact ? { value: fact.value, sourceUrl: fact.sourceUrl } : null,
+          factId: fact?.id ?? null,
         };
       });
 
@@ -128,6 +136,7 @@ export function buildSnapshotResults(bundle: SnapshotBundle): SnapshotResults {
           quote: kind === "visibility_gap" ? answer : firstSentence(answer),
           whyItMatters: whyItMatters(kind, prompt.focusArea, { competitorsNamed, fact }),
           fact: fact ? { value: fact.value, sourceUrl: fact.sourceUrl } : null,
+          factId: fact?.id ?? null,
         };
       });
 
@@ -135,6 +144,22 @@ export function buildSnapshotResults(bundle: SnapshotBundle): SnapshotResults {
   });
 
   const all = answers.flatMap((a) => a.findings);
+
+  // Priority line for each finding. A wrong or missing fact counts every answer it appears in;
+  // other findings belong to one answer. (A snapshot runs each question once, so evidence is usually low.)
+  for (const f of all) {
+    if (f.kind === "accurate") continue;
+    const occurrences =
+      (f.kind === "inaccurate" || f.kind === "coverage_gap") && f.factId
+        ? all.filter((o) => o.kind === f.kind && o.factId === f.factId).length
+        : 1;
+    f.priority = {
+      relevance: buyerRelevance(f.kind, f.focusArea),
+      impact: businessImpact(f.kind, f.focusArea),
+      strength: evidenceStrength(occurrences),
+      occurrences,
+    };
+  }
   const score = (f: Finding) => KIND_WEIGHT[f.kind] * 10 + FOCUS_WEIGHT[f.focusArea];
   const ranked = all.filter((f) => f.kind !== "accurate").sort((a, b) => score(b) - score(a));
 
@@ -147,8 +172,19 @@ export function buildSnapshotResults(bundle: SnapshotBundle): SnapshotResults {
   const counts = { accurate: 0, inaccurate: 0, unverifiable: 0, visibility_gap: 0, coverage_gap: 0 } as Record<FindingKind, number>;
   for (const f of all) counts[f.kind] += 1;
 
+  // The company's own website: its domain plus the pages its facts were read from.
+  const ownHosts = [brand?.url, ...facts.map((f) => f.sourceUrl), ...bundle.extraction.map((p) => p.url)].flatMap((u) => {
+    try {
+      return u ? [new URL(u).hostname.replace(/^www\./, "")] : [];
+    } catch {
+      return [];
+    }
+  });
+  const scoreInput = { runs, promptFor, claims, gaps, competitors, brandName: brand?.name, ownHosts: [...new Set(ownHosts)] };
+
   return {
-    scorecard: computeScorecard({ runs, promptFor, claims, gaps, competitors }),
+    scorecard: computeScorecard(scoreInput),
+    competitors: competitorMentions(scoreInput),
     topFindings: top,
     answers,
     counts,

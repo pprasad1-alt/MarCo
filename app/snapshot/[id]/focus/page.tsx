@@ -22,15 +22,22 @@ export default async function FocusPage(props: PageProps<"/snapshot/[id]/focus">
 
   const isMock = (bundle.audit.mode ?? getMode().mode) === "MOCK";
   const findings = buildSnapshotResults(bundle).answers.flatMap((a) => a.findings.filter((f) => f.kind !== "accurate"));
-  const options = FOCUS_AREAS.map((area) => {
+  const base = FOCUS_AREAS.map((area) => {
     const available = !isMock || MOCK_DEEP_AREAS.includes(area);
+    const inArea = findings.filter((f) => f.focusArea === area);
     return {
       area,
-      findings: findings.filter((f) => f.focusArea === area).length,
+      findings: inArea.length,
+      // High priority: buyer relevance x business impact of 6 or more (e.g. a wrong price, or not being named).
+      highPriority: inArea.filter((f) => f.priority && f.priority.relevance * f.priority.impact >= 6).length,
       available,
       unavailableReason: available ? undefined : "Not in the sample data. Available once Gemini is connected.",
     };
   });
+  const best = [...base]
+    .filter((o) => o.available && o.highPriority > 0)
+    .sort((a, b) => b.highPriority - a.highPriority || b.findings - a.findings)[0];
+  const options = base.map((o) => ({ ...o, recommended: o.area === best?.area }));
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">

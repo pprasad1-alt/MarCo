@@ -90,7 +90,7 @@ export function FactReview({
           onClick={() => setRows((rs) => rs.map((r) => (r.decision === "skip" ? { ...r, decision: "confirm" } : r)))}
           disabled={counts.skip === 0}
         >
-          Confirm all not reviewed
+          Confirm all remaining
         </Button>
       </div>
 

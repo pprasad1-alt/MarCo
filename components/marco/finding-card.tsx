@@ -22,6 +22,14 @@ export function FindingCard({ finding }: { finding: Finding }) {
         <span className="text-sm text-slate-500">{FOCUS_AREA_LABELS[finding.focusArea]}</span>
       </div>
       <h3 className="font-semibold text-slate-900">{finding.title}</h3>
+      {finding.priority && (
+        <p className="text-sm text-slate-500">
+          Priority: buyer relevance <span className="font-mono text-slate-700">{finding.priority.relevance}/3</span>,
+          business impact <span className="font-mono text-slate-700">{finding.priority.impact}/3</span>, evidence:{" "}
+          <span className="text-slate-700">{finding.priority.strength}</span>
+          {finding.priority.occurrences > 1 && ` (seen in ${finding.priority.occurrences} answers)`}
+        </p>
+      )}
       <EvidenceQuote
         quote={finding.quote}
         attribution={`AI answer to: “${finding.question}”`}

@@ -3,7 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { applyActionOp, reopenDraftsForChangedFacts } from "@/lib/actions";
-import { runSnapshotToEnd, startDeepAudit, startReAudit, startSnapshot } from "@/lib/audit";
+import { reclassifySnapshots, runSnapshotToEnd, startDeepAudit, startReAudit, startSnapshot } from "@/lib/audit";
+import { findingLabel } from "@/lib/findings";
 import { compareAudits, comparabilityWarnings } from "@/lib/compare";
 import { applyFactReview } from "@/lib/facts";
 import { resolveMode } from "@/lib/mode";
@@ -93,16 +94,32 @@ describe("re-audit", () => {
     expect(enterprise).toMatchObject({ kind: "inaccurate", before: 4, after: 2, change: "fewer" });
     const unchanged = cmp.issues.find((i) => /fast-growing startups/.test(i.observedIssue))!;
     expect(unchanged.change).toBe("same");
-    expect(cmp.warnings).toEqual([]);
     expect(cmp.metrics.find((m) => m.id === "verified-accuracy")).toMatchObject({ direction: "up", higherIsBetter: true });
+    expect(cmp.metrics.some((m) => m.direction === "same")).toBe(true); // unchanged rows are kept
   });
 
-  it("shows no change at all when nothing changed (pricing has no re-audit sample changes)", async () => {
+  it("pricing re-audit: the free plan inaccuracy is no longer observed, with a directional summary", async () => {
     const { deepId } = await deepAudit("pricing_plans");
     const reId = await reAudit(deepId);
     const cmp = compareAudits((await getSnapshotBundle(deepId))!, (await getSnapshotBundle(reId))!);
-    expect(cmp.issues.every((i) => i.change === "same")).toBe(true);
-    expect(cmp.metrics.every((m) => m.direction === "same" || m.direction === "not_comparable")).toBe(true);
+    expect(cmp.issues.find((i) => /Free plan for up to 5 users/.test(i.observedIssue))!.change).toBe("not_seen");
+    const text = cmp.summary.join(" ");
+    expect(text).toMatch(/FlowOps appeared in \d+ of 9 sampled answers to questions that don't name it, compared with \d+ of 9 at baseline\./);
+    expect(text).toMatch(/“Free plan for up to 5 users” was no longer observed/);
+    expect(text).toMatch(/Results are directional and do not establish causation\./);
+    // The sample re-audit records a newer model, to show the comparability warning.
+    expect(cmp.warnings).toContain("Model version changed since baseline (mock-fixture → mock-fixture-2).");
+  });
+
+  it("re-audit summaries never use causal or exaggerated wording", async () => {
+    for (const area of ["pricing_plans", "use_cases_customers"] as const) {
+      const { deepId } = await deepAudit(area);
+      const reId = await reAudit(deepId);
+      const text = compareAudits((await getSnapshotBundle(deepId))!, (await getSnapshotBundle(reId))!).summary.join(" ");
+      expect(text).not.toMatch(/doubled|tripled|halved/i);
+      expect(text).not.toMatch(/(increased|decreased|rose|fell|grew|dropped) by \d+ ?%/i);
+      expect(text).not.toMatch(/\bcaused\b|\bbecause of\b|\bthanks to\b|\bresult(ed)? of\b/i);
+    }
   });
 
   it("warns when the model or settings differ", async () => {
@@ -112,7 +129,7 @@ describe("re-audit", () => {
     const re = (await getSnapshotBundle(reId))!;
     re.runs = re.runs.map((r) => ({ ...r, modelId: "gemini-x", groundingSettings: { googleSearch: true } }));
     const w = comparabilityWarnings(base, re);
-    expect(w.some((x) => /model changed/.test(x))).toBe(true);
+    expect(w.some((x) => /Model version changed since baseline/.test(x))).toBe(true);
     expect(w.some((x) => /grounding/i.test(x))).toBe(true);
   });
 
@@ -191,5 +208,34 @@ describe("audits keep the mode they started in", () => {
   it("a live snapshot isn't faked with mock data (not connected yet)", async () => {
     const LIVE = resolveMode({ GEMINI_API_KEY: "k" });
     expect(await startSnapshot("https://acme.com", LIVE)).toMatchObject({ ok: false, error: /isn't connected yet/ });
+  });
+});
+
+describe("confirming facts re-labels the snapshot", () => {
+  it("confirming turns 'Potential inaccuracy' into 'Inaccurate'; rejecting removes the inaccuracy", async () => {
+    const s = await startSnapshot("https://flowops.com", MOCK);
+    if (!s.ok) throw new Error(s.error);
+    await runSnapshotToEnd(s.auditId, MOCK);
+    const freePlan = (b: Awaited<ReturnType<typeof getSnapshotBundle>>) =>
+      b!.claims.find((c) => c.answerExcerpt === "FlowOps has a free plan for up to 10 users.")!;
+
+    // Before review: potential.
+    const before = freePlan(await getSnapshotBundle(s.auditId));
+    expect(before).toMatchObject({ label: "inaccurate", potential: true });
+    expect(findingLabel("inaccurate", before.potential)).toBe("Potential inaccuracy");
+
+    // Confirm all facts (the API route re-labels the snapshot after saving).
+    await saveReview(s.brandId, () => ({ decision: "confirm" }));
+    await updateStore({ brandId: s.brandId }, (d) => reclassifySnapshots(d, s.brandId));
+    const confirmed = freePlan(await getSnapshotBundle(s.auditId));
+    expect(confirmed).toMatchObject({ label: "inaccurate", potential: false });
+    expect(findingLabel("inaccurate", confirmed.potential)).toBe("Inaccurate");
+
+    // Reject the free plan fact: no inaccuracy about it any more (the claim can no longer be checked).
+    await saveReview(s.brandId, (key) => (key === "f-pricing-free" ? { decision: "reject" } : { decision: "confirm" }));
+    await updateStore({ brandId: s.brandId }, (d) => reclassifySnapshots(d, s.brandId));
+    const after = await getSnapshotBundle(s.auditId);
+    expect(after!.claims.some((c) => c.label === "inaccurate" && c.matchedFactId === `${s.brandId}-f-pricing-free`)).toBe(false);
+    expect(freePlan(after)).toMatchObject({ label: "unverifiable" });
   });
 });

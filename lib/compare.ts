@@ -6,6 +6,7 @@
  * honestly. If the model, settings or questions differ, the comparison carries
  * a comparability warning.
  */
+import { getPrompt, mentionsBrand } from "@/lib/prompts";
 import { buildSnapshotResults } from "@/lib/results";
 import type { SnapshotBundle } from "@/lib/store";
 import type { FindingKind } from "@/lib/types";
@@ -32,6 +33,8 @@ export type IssueChange = {
 };
 
 export type Comparison = {
+  /** Plain-language summary. Directional only: no "doubled", percentages of change or "caused". */
+  summary: string[];
   warnings: string[];
   metrics: MetricChange[];
   issues: IssueChange[];
@@ -40,7 +43,6 @@ export type Comparison = {
 
 const HIGHER_IS_BETTER: Record<string, boolean | null> = {
   "unaided-mention": true,
-  "competitor-inclusion": null,
   "verified-accuracy": true,
   "unsupported-claims": false,
   "coverage-gaps": false,
@@ -59,7 +61,7 @@ export function comparabilityWarnings(baseline: SnapshotBundle, current: Snapsho
   const differs = ([a, b]: readonly [string[], string[]]) => a.join("|") !== b.join("|");
 
   const models = pair((b) => b.runs.map((r) => r.modelId));
-  if (differs(models)) warnings.push(`The AI model changed (${models[0].join(", ")} → ${models[1].join(", ")}).`);
+  if (differs(models)) warnings.push(`Model version changed since baseline (${models[0].join(", ")} → ${models[1].join(", ")}).`);
   const modes = pair((b) => b.runs.map((r) => r.mode));
   if (differs(modes)) warnings.push(`The audit mode changed (${modes[0].join(", ")} → ${modes[1].join(", ")}).`);
   if (differs(pair((b) => b.runs.map((r) => JSON.stringify(r.groundingSettings))))) warnings.push("Search grounding settings changed.");
@@ -133,7 +135,40 @@ export function compareAudits(baseline: SnapshotBundle, current: SnapshotBundle)
       return issue && draft?.publishedAt ? [{ observedIssue: issue.observedIssue, publishedAt: draft.publishedAt }] : [];
     });
 
-  return { warnings: comparabilityWarnings(baseline, current), metrics, issues, published };
+  return { summary: summarize(baseline, current, issues), warnings: comparabilityWarnings(baseline, current), metrics, issues, published };
+}
+
+/** How many discovery answers (questions that don't name the brand) included it. */
+function brandAppearances(b: SnapshotBundle): { count: number; total: number } {
+  const name = b.brand?.name ?? "";
+  const done = b.runs.filter((r) => r.status === "completed" && r.answer && getPrompt(r.promptId).type === "discovery");
+  return { count: done.filter((r) => name && mentionsBrand(r.answer ?? "", name)).length, total: done.length };
+}
+
+/**
+ * A short, directional summary. Counts only; never "doubled", "increased by X%"
+ * or "caused": a 15-answer sample can't establish why something changed.
+ */
+export function summarize(baseline: SnapshotBundle, current: SnapshotBundle, issues: IssueChange[]): string[] {
+  const name = current.brand?.name ?? "Your company";
+  const before = brandAppearances(baseline);
+  const after = brandAppearances(current);
+  const lines = [
+    after.count === before.count
+      ? `${name} appeared in ${after.count} of ${after.total} sampled answers to questions that don't name it, the same as at baseline.`
+      : `${name} appeared in ${after.count} of ${after.total} sampled answers to questions that don't name it, compared with ${before.count} of ${before.total} at baseline.`,
+  ];
+  for (const i of issues.filter((x) => x.kind === "inaccurate")) {
+    const fact = i.observedIssue.match(/“(.+)”/)?.[1];
+    const what = fact ? `The inaccuracy about “${fact}”` : "An inaccuracy";
+    if (i.change === "not_seen") lines.push(`${what} was no longer observed in this sample.`);
+    else if (i.change === "fewer") lines.push(`${what} was observed less often (in ${i.after} answers, compared with ${i.before} at baseline).`);
+    else if (i.change === "same") lines.push(`${what} was still observed (in ${i.after} answers, as at baseline).`);
+    else if (i.change === "more") lines.push(`${what} was observed more often (in ${i.after} answers, compared with ${i.before} at baseline).`);
+    else lines.push(`${what} was observed for the first time (in ${i.after} answers).`);
+  }
+  lines.push("Results are directional and do not establish causation.");
+  return lines;
 }
 
 export const ISSUE_CHANGE_LABELS: Record<IssueChange["change"], string> = {

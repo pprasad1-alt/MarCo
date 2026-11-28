@@ -30,6 +30,8 @@ const Fixture = z.object({
   answers: z.record(z.string(), z.union([MockAnswer, z.array(MockAnswer).min(1)])),
   /** Answers used by re-audits; questions not listed reuse `answers`. */
   reauditAnswers: z.record(z.string(), z.union([MockAnswer, z.array(MockAnswer).min(1)])).default({}),
+  /** Model id recorded for mock re-audits (differs from the baseline to show the comparability warning). */
+  reauditModelId: z.string().default("mock-fixture"),
 });
 export type Fixture = z.infer<typeof Fixture>;
 
