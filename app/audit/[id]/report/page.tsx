@@ -74,7 +74,7 @@ function IssueCard({
 
 export default async function DeepReportPage(props: PageProps<"/audit/[id]/report">) {
   const { id } = await props.params;
-  const data = await readStore();
+  const data = await readStore({ auditId: id });
   const bundle = bundleFrom(data, id);
   if (!bundle?.brand) notFound();
   if (bundle.audit.type === "snapshot") redirect(`/snapshot/${id}/results`);

@@ -45,7 +45,7 @@ function toStatus(p: SnapshotProgress): SnapshotStatus {
 export async function startSnapshot(
   inputUrl: string,
   mode: ModeInfo = getMode(),
-): Promise<{ ok: true; auditId: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; auditId: string; brandId: string } | { ok: false; error: string }> {
   const checked = validateUrl(inputUrl);
   if (!checked.ok) return checked;
 
@@ -68,7 +68,7 @@ export async function startSnapshot(
     createdAt,
   };
 
-  await updateStore((data) => {
+  await updateStore({ newBrandId: brandId }, (data) => {
     data.brands.push(brand);
     data.audits.push({ id: auditId, brandId, type: "snapshot", focusArea: null, baselineAuditId: null, createdAt, mode: mode.mode });
     data.progress.push({
@@ -82,12 +82,12 @@ export async function startSnapshot(
       updatedAt: createdAt,
     });
   });
-  return { ok: true, auditId };
+  return { ok: true, auditId, brandId };
 }
 
 /** Follow-up audits use the mode of the audit they build on, so a mock sample stays mock. */
 export async function inheritedMode(auditId: string, fallback: ModeInfo): Promise<ModeInfo> {
-  const stored = (await readStore()).audits.find((a) => a.id === auditId)?.mode;
+  const stored = (await readStore({ auditId })).audits.find((a) => a.id === auditId)?.mode;
   return stored ? modeInfoFor(stored) : fallback;
 }
 
@@ -107,7 +107,7 @@ export async function startDeepAudit(
   }
   const auditId = randomUUID();
   const createdAt = now();
-  const result = await updateStore((data) => {
+  const result = await updateStore({ auditId: snapshotId }, (data) => {
     const snapshot = data.audits.find((a) => a.id === snapshotId);
     const brand = snapshot && data.brands.find((b) => b.id === snapshot.brandId);
     if (!snapshot || !brand) return { ok: false as const, error: "We couldn't find that snapshot. Please start a new one." };
@@ -132,7 +132,7 @@ export async function startReAudit(
   if (mode.mode !== "MOCK") return { ok: false, error: new NotConnectedError("Live audits").message };
   const newId = randomUUID();
   const createdAt = now();
-  return updateStore((data) => {
+  return updateStore({ auditId }, (data) => {
     const source = data.audits.find((a) => a.id === auditId);
     const baseline = source?.type === "re_audit" ? data.audits.find((a) => a.id === source.baselineAuditId) : source;
     if (!baseline || baseline.type !== "deep" || !baseline.focusArea) {
@@ -202,7 +202,7 @@ function load(data: StoreData, auditId: string) {
 
 async function runStep(auditId: string, requestedMode: ModeInfo): Promise<SnapshotStatus> {
   // Read current state (no work inside the store lock: AI calls can be slow).
-  const snapshot = await updateStore((data) => {
+  const snapshot = await updateStore({ auditId }, (data) => {
     const { progress, brand, audit } = load(data, auditId);
     return {
       progress: { ...progress },
@@ -311,7 +311,7 @@ async function runStep(auditId: string, requestedMode: ModeInfo): Promise<Snapsh
         };
       }
       case "diagnosing": {
-        const fresh = await readStore();
+        const fresh = await readStore({ auditId });
         const runIds = new Set(snapshot.runs.map((r) => r.id));
         const result = await diagnose({
           auditId,
@@ -349,7 +349,7 @@ async function runStep(auditId: string, requestedMode: ModeInfo): Promise<Snapsh
     }
   }
 
-  return updateStore((data) => {
+  return updateStore({ auditId }, (data) => {
     const { progress: p } = load(data, auditId);
     if (apply) {
       apply(data, p);
