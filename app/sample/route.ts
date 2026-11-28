@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 import { startSnapshot } from "@/lib/audit";
 import { resolveMode } from "@/lib/mode";
 import { MOCK_FIXTURE } from "@/lib/mock";
@@ -10,6 +10,8 @@ import { findFinishedSample, storeBackend } from "@/lib/store";
  * runs one through the normal progress screen.
  */
 export async function GET(request: Request) {
+  // Only ever run when someone opens the link, never ahead of time during a build.
+  await connection();
   try {
     const done = await findFinishedSample(MOCK_FIXTURE.brand.url);
     if (done) return NextResponse.redirect(new URL(`/snapshot/${done}/results`, request.url), 303);
